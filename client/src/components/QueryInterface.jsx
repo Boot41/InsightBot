@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
          LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import axios from 'axios';
 
 // Mock movie data
 const movieData = [
@@ -63,12 +64,55 @@ const QueryInterface = () => {
   const [isEditingSql, setIsEditingSql] = useState(false);
   const sqlEditorRef = useRef(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     console.log('Query submitted:', query);
-    // Here you would typically send the query to your backend
+
+    // Fetch dbConfig from localStorage
+    const storedDbConfig = localStorage.getItem('connectionFormData');
+    let dbConfig;
+
+    if (storedDbConfig) {
+      dbConfig = JSON.parse(storedDbConfig);
+      // Rename keys to match backend expectation if necessary
+      dbConfig = {
+        name: dbConfig.database, // Assuming 'database' in localStorage maps to 'name' for backend
+        user: dbConfig.username, // Assuming 'username' in localStorage maps to 'user' for backend
+        password: dbConfig.password,
+        host: dbConfig.host,
+        port: dbConfig.port || '5432' // Default port if not in localStorage
+      };
+    } else {
+      console.error('No database configuration found in localStorage.');
+      alert('No database connection configured. Please connect to a database first.');
+      return; // Stop submission if no dbConfig is found
+    }
+
+
+    try {
+      const res = await axios.post('http://localhost:8000/api/generate-sql/', {
+        natural_language: query,
+        db_config: dbConfig
+      });
+
+      console.log('Response from backend:', res.data);
+
+      if (res.status === 200) {
+        setGeneratedSqlQuery(res.data.sql_query);
+        setShowResults(true);
+      } else {
+        console.error('Error generating SQL:', res.status, res.data);
+        alert(`Error generating SQL. Status: ${res.status}. See console.`);
+      }
+
+    } catch (error) {
+      console.error('Error sending query:', error);
+      alert('Failed to send query. Check console for error.');
+    }
+
     setShowResults(true);
   };
+
 
   const handleSqlSubmit = () => {
     console.log('SQL query submitted:', sqlQuery);
@@ -161,7 +205,7 @@ const QueryInterface = () => {
                 </div>
 
                 {/* AI Insights - Takes 1 column */}
-                <div>
+                {/* <div>
                   <h2 className="text-xl font-bold mb-3 gradient-text">AI Insights</h2>
                   <div className="card h-[500px] overflow-y-auto">
                     <h3 className="text-lg font-semibold mb-4 flex items-center">
@@ -179,15 +223,14 @@ const QueryInterface = () => {
                       ))}
                     </ul>
                   </div>
-                </div>
+                </div> */}
               </div>
 
               {/* Visualizations - Varied card sizes */}
-              <div className="mb-8">
+              {/* <div className="mb-8">
                 <h2 className="text-xl font-bold mb-3 gradient-text">Visualizations</h2>
                 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                  {/* Bar Chart - 5 columns */}
                   <div className="card md:col-span-5">
                     <h3 className="text-lg font-semibold mb-4 flex items-center">
                       <FiBarChart2 className="mr-2 text-primary-500" />
@@ -207,7 +250,6 @@ const QueryInterface = () => {
                     </ResponsiveContainer>
                   </div>
 
-                  {/* Pie Chart - 3 columns */}
                   <div className="card md:col-span-3">
                     <h3 className="text-lg font-semibold mb-4 flex items-center">
                       <FiPieChart className="mr-2 text-secondary-500" />
@@ -234,7 +276,6 @@ const QueryInterface = () => {
                     </ResponsiveContainer>
                   </div>
 
-                  {/* Stream Count Chart - 4 columns */}
                   <div className="card md:col-span-4">
                     <h3 className="text-lg font-semibold mb-4 flex items-center">
                       <FiBarChart2 className="mr-2 text-secondary-500" />
@@ -254,7 +295,6 @@ const QueryInterface = () => {
                     </ResponsiveContainer>
                   </div>
 
-                  {/* Line Chart - Full width */}
                   <div className="card md:col-span-12">
                     <h3 className="text-lg font-semibold mb-4 flex items-center">
                       <FiTrendingUp className="mr-2 text-primary-500" />
@@ -272,7 +312,7 @@ const QueryInterface = () => {
                     </ResponsiveContainer>
                   </div>
                 </div>
-              </div>
+              </div> */}
             </motion.div>
           </div>
         )}
@@ -345,6 +385,7 @@ const QueryInterface = () => {
               <button
                 type="submit"
                 className="w-10 h-10 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 text-white flex items-center justify-center hover:shadow-md transition-all duration-300 ml-2"
+                onClick={handleSubmit}
               >
                 <FiSend />
               </button>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiDatabase } from 'react-icons/fi';
 
@@ -12,6 +12,9 @@ const ConnectionDialog = ({ onClose, onConnect }) => {
     password: ''
   });
 
+  const storedFormData = localStorage.getItem('connectionFormData');
+
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -22,8 +25,14 @@ const ConnectionDialog = ({ onClose, onConnect }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    localStorage.setItem('connectionFormData', JSON.stringify(formData));
     onConnect(formData);
   };
+  useEffect(() => {
+    if (storedFormData) {
+      setFormData(JSON.parse(storedFormData));
+    }
+  }, [storedFormData]);
 
   return (
     <AnimatePresence>
