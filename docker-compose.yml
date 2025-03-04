@@ -43,6 +43,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/insightbot
       - DATABASE_QUERY_URL=postgresql://user:password@querydb:5432/querydb
+      - GROQ_API_KEY=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
     depends_on:
       - db
       - querydb
