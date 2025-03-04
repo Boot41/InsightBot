@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'insights',
+    'quering',
 ]
 
 MIDDLEWARE = [
@@ -77,15 +78,20 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 DATABASES = {
     'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    },
+    'querydb': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'insightbot',
-        'USER': 'postgres',
-        'PASSWORD': 'postgres',
-        'HOST': 'db',
+        'NAME': 'querydb',
+        'USER': 'user',
+        'PASSWORD': 'password',
+        'HOST': 'querydb',
         'PORT': '5432',
     }
 }
 
+DATABASE_ROUTERS = ['quering.router.QueryDBRouter']
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -104,7 +110,6 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
-
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
