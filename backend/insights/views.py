@@ -200,12 +200,12 @@ def generate_sql_query(request):
         # Create the prompt
         prompt = f"""Given the following database schema:
 
-{schema_description}
+    {schema_description}
 
-Convert this natural language query to SQL:
-"{natural_language}"
+    Convert this natural language query to SQL:
+    "{natural_language}"
 
-Respond with ONLY the SQL query, no explanations or additional text. Make sure the query is valid PostgreSQL syntax."""
+    Respond with ONLY the SQL query, no explanations or additional text. Make sure the query is valid PostgreSQL syntax."""
 
         # Generate SQL query using Groq
         chat_completion = client.chat.completions.create(

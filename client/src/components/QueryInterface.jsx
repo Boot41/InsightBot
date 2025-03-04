@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { FiSend, FiArrowLeft, FiDatabase, FiBarChart2, FiPieChart, FiTrendingUp, FiInfo, FiEdit2 } from 'react-icons/fi';
+import { FiSend, FiArrowLeft, FiDatabase, FiBarChart2, FiPieChart, FiTrendingUp, FiInfo, FiEdit2, FiArrowUpCircle } from 'react-icons/fi';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
          LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -96,9 +96,10 @@ const QueryInterface = () => {
       });
 
       console.log('Response from backend:', res.data);
+      console.log('Generated SQL query:',res.data.sql_query)
 
       if (res.status === 200) {
-        setGeneratedSqlQuery(res.data.sql_query);
+        setSqlQuery(res.data.sql_query);
         setShowResults(true);
       } else {
         console.error('Error generating SQL:', res.status, res.data);
@@ -111,6 +112,54 @@ const QueryInterface = () => {
     }
 
     setShowResults(true);
+  };
+  const runQuery = async () => {
+    // Fetch dbConfig from localStorage (same logic as in handleSubmit)
+    const storedDbConfig = localStorage.getItem('connectionFormData');
+    let dbConfig;
+
+    if (storedDbConfig) {
+      dbConfig = JSON.parse(storedDbConfig);
+      dbConfig = {
+        name: dbConfig.database,
+        user: dbConfig.username,
+        password: dbConfig.password,
+        host: dbConfig.host,
+        port: dbConfig.port || '5432'
+      };
+    } else {
+      console.error('No database configuration found in localStorage.');
+      alert('No database connection configured. Please connect to a database first.');
+      return;
+    }
+
+    if (!sqlQuery) {
+      alert('No SQL query to run. Generate a query first.');
+      return;
+    }
+
+    console.log('Running SQL query:', sqlQuery);
+
+    try {
+      const res = await axios.post('http://localhost:8000/api/raw-sql/', {
+        query: sqlQuery, // Use the current sqlQuery state
+        db_config: dbConfig
+      });
+
+      console.log('Response from backend (raw-sql):', res.data);
+
+      if (res.status === 200) {
+        setQueryResults(res.data.results || res.data.affected_rows || {message: 'Query executed successfully'}); // Handle different response types
+        setShowResults(true); // Keep results section visible or update as needed
+      } else {
+        console.error('Error running SQL query:', res.status, res.data);
+        alert(`Error running SQL query. Status: ${res.status}. See console.`);
+      }
+
+    } catch (error) {
+      console.error('Error sending query (raw-sql):', error);
+      alert('Failed to send query (raw-sql). Check console for error.');
+    }
   };
 
 
@@ -325,13 +374,24 @@ const QueryInterface = () => {
             <div className="bg-white rounded-2xl shadow-xl mb-3 overflow-hidden border border-gray-100">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <h3 className="text-sm font-medium text-dark-600">Generated SQL</h3>
-                <button 
-                  onClick={handleSqlEdit}
-                  className="text-primary-600 hover:text-primary-700 text-sm flex items-center"
-                >
-                  <FiEdit2 className="mr-1" size={14} />
-                  {isEditingSql ? 'Cancel' : 'Edit SQL'}
-                </button>
+                
+                <div className="ml-auto flex items-center">
+                  <button 
+                    onClick={runQuery}
+                    className="text-primary-600 hover:text-primary-700 text-sm flex items-center mr-2"
+                  >
+                    <FiArrowUpCircle className="mr-1" size={14} />
+                    FIRE
+                  </button>
+                  <button 
+                    onClick={handleSqlEdit}
+                    className="text-primary-600 hover:text-primary-700 text-sm flex items-center mr-2"
+                  >
+                    <FiEdit2 className="mr-1" size={14} />
+                    {isEditingSql ? 'Cancel' : 'Edit SQL'}
+                  </button>
+
+                </div>
               </div>
               
               {isEditingSql ? (
