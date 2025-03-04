@@ -1,102 +1,623 @@
 [
-    {
-      "model": "quering.user",
-      "pk": 1,
-      "fields": {
-        "username": "john_doe",
-        "first_name": "John",
-        "last_name": "Doe",
-        "email": "johndoe@example.com",
-        "date_joined": "2025-03-04T04:45:00Z",
-        "is_active": true
-      }
-    },
-    {
-      "model": "quering.Genre",
-      "pk": 1,
-      "fields": {
-        "name": "Action"
-      }
-    },
-    {
-      "model": "quering.Genre",
-      "pk": 2,
-      "fields": {
-        "name": "Comedy"
-      }
-    },
-    {
-      "model": "quering.Movie",
-      "pk": 1,
-      "fields": {
-        "title": "Fast & Furious",
-        "description": "A high-speed action thriller about street racing and heists.",
-        "release_year": 2001,
-        "duration": 107,
-        "language": "English",
-        "rating": 7.5,
-        "age_restriction": "PG-13",
-        "added_at": "2024-03-01T12:00:00Z",
-        "genres": [1]
-      }
-    },
-    {
-      "model": "quering.Movie",
-      "pk": 2,
-      "fields": {
-        "title": "The Hangover",
-        "description": "A comedy about a group of friends who lose their friend during a bachelor party in Las Vegas.",
-        "release_year": 2009,
-        "duration": 100,
-        "language": "English",
-        "rating": 8.0,
-        "age_restriction": "R",
-        "added_at": "2024-03-01T12:05:00Z",
-        "genres": [2]
-      }
-    },
-    {
-      "model": "quering.TVShow",
-      "pk": 1,
-      "fields": {
-        "title": "Breaking Bad",
-        "description": "A high school chemistry teacher turned methamphetamine producer partners with a former student.",
-        "release_year": 2008,
-        "total_seasons": 5,
-        "language": "English",
-        "rating": 9.5,
-        "age_restriction": "R",
-        "added_at": "2024-03-01T12:10:00Z",
-        "genres": [1]
-      }
-    },
-    {
-      "model": "quering.Season",
-      "pk": 1,
-      "fields": {
-        "show": 1,
-        "season_number": 1,
-        "release_year": 2008
-      }
-    },
-    {
-      "model": "quering.Episode",
-      "pk": 1,
-      "fields": {
-        "show": 1,
-        "season": 1,
-        "title": "Pilot",
-        "episode_number": 1,
-        "duration": 58,
-        "release_date": "2008-01-20"
-      }
-    },
+  {
+    "model": "quering.user",
+    "pk": 1,
+    "fields": {
+      "username": "john_doe",
+      "first_name": "John",
+      "last_name": "Doe",
+      "email": "johndoe@example.com",
+      "date_joined": "2025-03-04T04:45:00Z",
+      "is_active": true
+    }
+  },
+  {
+    "model": "quering.user",
+    "pk": 2,
+    "fields": {
+      "username": "jane_smith",
+      "first_name": "Jane",
+      "last_name": "Smith",
+      "email": "janesmith@example.com",
+      "date_joined": "2025-03-02T08:30:00Z",
+      "is_active": true
+    }
+  },
+  {
+    "model": "quering.user",
+    "pk": 3,
+    "fields": {
+      "username": "mike_jordan",
+      "first_name": "Mike",
+      "last_name": "Jordan",
+      "email": "mikejordan@example.com",
+      "date_joined": "2025-02-28T10:15:00Z",
+      "is_active": false
+    }
+  },
+  {
+    "model": "quering.user",
+    "pk": 4,
+    "fields": {
+      "username": "emily_clark",
+      "first_name": "Emily",
+      "last_name": "Clark",
+      "email": "emilyclark@example.com",
+      "date_joined": "2025-02-25T12:45:00Z",
+      "is_active": true
+    }
+  },
+  {
+    "model": "quering.user",
+    "pk": 5,
+    "fields": {
+      "username": "david_wilson",
+      "first_name": "David",
+      "last_name": "Wilson",
+      "email": "davidwilson@example.com",
+      "date_joined": "2025-02-20T14:20:00Z",
+      "is_active": true
+    }
+  },
+  {
+    "model": "quering.Genre",
+    "pk": 1,
+    "fields": {
+      "name": "Action"
+    }
+  },
+  {
+    "model": "quering.Genre",
+    "pk": 2,
+    "fields": {
+      "name": "Comedy"
+    }
+  },
+  {
+    "model": "quering.Genre",
+    "pk": 3,
+    "fields": {
+      "name": "Drama"
+    }
+  },
+  {
+    "model": "quering.Genre",
+    "pk": 4,
+    "fields": {
+      "name": "Sci-Fi"
+    }
+  },
+  {
+    "model": "quering.Genre",
+    "pk": 5,
+    "fields": {
+      "name": "Horror"
+    }
+  },
+  {
+    "model": "quering.Genre",
+    "pk": 6,
+    "fields": {
+      "name": "Thriller"
+    }
+  },
+  {
+    "model": "quering.Genre",
+    "pk": 7,
+    "fields": {
+      "name": "Fantasy"
+    }
+  },
+  {
+    "model": "quering.Genre",
+    "pk": 8,
+    "fields": {
+      "name": "Mystery"
+    }
+  },
+  {
+    "model": "quering.Genre",
+    "pk": 9,
+    "fields": {
+      "name": "Romance"
+    }
+  },
+  {
+    "model": "quering.Genre",
+    "pk": 10,
+    "fields": {
+      "name": "Adventure"
+    }
+  },
+  {
+    "model": "quering.Movie",
+    "pk": 1,
+    "fields": {
+      "title": "Fast & Furious",
+      "description": "A high-speed action thriller about street racing and heists.",
+      "release_year": 2001,
+      "duration": 107,
+      "language": "English",
+      "rating": 7.5,
+      "age_restriction": "PG-13",
+      "added_at": "2024-03-01T12:00:00Z",
+      "genres": [1]
+    }
+  },
+  {
+    "model": "quering.Movie",
+    "pk": 2,
+    "fields": {
+      "title": "The Hangover",
+      "description": "A comedy about a group of friends who lose their friend during a bachelor party in Las Vegas.",
+      "release_year": 2009,
+      "duration": 100,
+      "language": "English",
+      "rating": 8.0,
+      "age_restriction": "R",
+      "added_at": "2024-03-01T12:05:00Z",
+      "genres": [2]
+    }
+  },
+  {
+    "model": "quering.Movie",
+    "pk": 3,
+    "fields": {
+      "title": "Inception",
+      "description": "A skilled thief is given a chance at redemption if he can successfully perform an inception.",
+      "release_year": 2010,
+      "duration": 148,
+      "language": "English",
+      "rating": 8.8,
+      "age_restriction": "PG-13",
+      "added_at": "2024-03-02T14:10:00Z",
+      "genres": [4, 6]
+    }
+  },
+  {
+    "model": "quering.Movie",
+    "pk": 4,
+    "fields": {
+      "title": "The Conjuring",
+      "description": "Paranormal investigators help a family terrorized by a dark presence.",
+      "release_year": 2013,
+      "duration": 112,
+      "language": "English",
+      "rating": 7.5,
+      "age_restriction": "R",
+      "added_at": "2024-03-03T16:30:00Z",
+      "genres": [5, 6]
+    }
+  },
+  {
+    "model": "quering.Movie",
+    "pk": 5,
+    "fields": {
+      "title": "Titanic",
+      "description": "A love story set against the ill-fated voyage of the Titanic.",
+      "release_year": 1997,
+      "duration": 195,
+      "language": "English",
+      "rating": 8.7,
+      "age_restriction": "PG-13",
+      "added_at": "2024-03-04T10:20:00Z",
+      "genres": [3, 9]
+    }
+  },
+  {
+    "model": "quering.Movie",
+    "pk": 6,
+    "fields": {
+      "title": "Interstellar",
+      "description": "A group of explorers travel through a wormhole in search of a new habitable planet.",
+      "release_year": 2014,
+      "duration": 169,
+      "language": "English",
+      "rating": 8.6,
+      "age_restriction": "PG-13",
+      "added_at": "2024-03-05T15:30:00Z",
+      "genres": [4, 7]
+    }
+  },
+  {
+    "model": "quering.Movie",
+    "pk": 7,
+    "fields": {
+      "title": "The Dark Knight",
+      "description": "Batman faces off against the Joker in Gotham City.",
+      "release_year": 2008,
+      "duration": 152,
+      "language": "English",
+      "rating": 9.0,
+      "age_restriction": "PG-13",
+      "added_at": "2024-03-06T17:45:00Z",
+      "genres": [1, 6]
+    }
+  },
+  {
+    "model": "quering.Movie",
+    "pk": 8,
+    "fields": {
+      "title": "Avengers: Endgame",
+      "description": "The Avengers assemble to undo the destruction caused by Thanos.",
+      "release_year": 2019,
+      "duration": 181,
+      "language": "English",
+      "rating": 8.4,
+      "age_restriction": "PG-13",
+      "added_at": "2024-03-07T11:15:00Z",
+      "genres": [1, 7]
+    }
+  },
+  {
+    "model": "quering.Movie",
+    "pk": 9,
+    "fields": {
+      "title": "Joker",
+      "description": "A man struggles with mental illness and becomes Gotham's most feared villain.",
+      "release_year": 2019,
+      "duration": 122,
+      "language": "English",
+      "rating": 8.5,
+      "age_restriction": "R",
+      "added_at": "2024-03-08T20:00:00Z",
+      "genres": [3, 6]
+    }
+  },
+  {
+    "model": "quering.Movie",
+    "pk": 10,
+    "fields": {
+      "title": "The Matrix",
+      "description": "A computer hacker learns about the true nature of reality and his role in the war against its controllers.",
+      "release_year": 1999,
+      "duration": 136,
+      "language": "English",
+      "rating": 8.7,
+      "age_restriction": "R",
+      "added_at": "2024-03-09T09:45:00Z",
+      "genres": [4, 6]
+    }
+  },
+  {
+    "model": "quering.TVShow",
+    "pk": 1,
+    "fields": {
+      "title": "Breaking Bad",
+      "description": "A high school chemistry teacher turned methamphetamine producer partners with a former student.",
+      "release_year": 2008,
+      "total_seasons": 5,
+      "language": "English",
+      "rating": 9.5,
+      "age_restriction": "R",
+      "added_at": "2024-03-01T12:10:00Z",
+      "genres": [1]
+    }
+  },
+  {
+    "model": "quering.TVShow",
+    "pk": 2,
+    "fields": {
+      "title": "Game of Thrones",
+      "description": "Noble families vie for control of the Seven Kingdoms of Westeros.",
+      "release_year": 2011,
+      "total_seasons": 8,
+      "language": "English",
+      "rating": 9.3,
+      "age_restriction": "R",
+      "added_at": "2024-03-02T14:10:00Z",
+      "genres": [1, 3]
+    }
+  },
+  {
+    "model": "quering.TVShow",
+    "pk": 3,
+    "fields": {
+      "title": "Stranger Things",
+      "description": "A group of kids uncover a series of supernatural mysteries in their small town.",
+      "release_year": 2016,
+      "total_seasons": 4,
+      "language": "English",
+      "rating": 8.7,
+      "age_restriction": "PG-13",
+      "added_at": "2024-03-03T16:30:00Z",
+      "genres": [4, 6]
+    }
+  },
+  {
+    "model": "quering.TVShow",
+    "pk": 4,
+    "fields": {
+      "title": "The Witcher",
+      "description": "A monster hunter struggles to find his place in a world where people are often worse than beasts.",
+      "release_year": 2019,
+      "total_seasons": 3,
+      "language": "English",
+      "rating": 8.2,
+      "age_restriction": "R",
+      "added_at": "2024-03-04T10:20:00Z",
+      "genres": [1, 7]
+    }
+  },
+  {
+    "model": "quering.TVShow",
+    "pk": 5,
+    "fields": {
+      "title": "Sherlock",
+      "description": "A modern adaptation of Arthur Conan Doyle's Sherlock Holmes detective stories.",
+      "release_year": 2010,
+      "total_seasons": 4,
+      "language": "English",
+      "rating": 9.1,
+      "age_restriction": "PG-13",
+      "added_at": "2024-03-05T15:30:00Z",
+      "genres": [6, 8]
+    }
+  },
+  {
+    "model": "quering.TVShow",
+    "pk": 6,
+    "fields": {
+      "title": "The Office",
+      "description": "A mockumentary on a group of typical office workers.",
+      "release_year": 2005,
+      "total_seasons": 9,
+      "language": "English",
+      "rating": 8.9,
+      "age_restriction": "PG-13",
+      "added_at": "2024-03-06T17:45:00Z",
+      "genres": [2]
+    }
+  },
+  {
+    "model": "quering.TVShow",
+    "pk": 7,
+    "fields": {
+      "title": "Friends",
+      "description": "A group of friends navigates love and life in New York City.",
+      "release_year": 1994,
+      "total_seasons": 10,
+      "language": "English",
+      "rating": 8.8,
+      "age_restriction": "PG-13",
+      "added_at": "2024-03-07T11:15:00Z",
+      "genres": [2, 3]
+    }
+  },
+  {
+    "model": "quering.TVShow",
+    "pk": 8,
+    "fields": {
+      "title": "House of Cards",
+      "description": "A ruthless politician seeks revenge on those who betrayed him.",
+      "release_year": 2013,
+      "total_seasons": 6,
+      "language": "English",
+      "rating": 8.6,
+      "age_restriction": "R",
+      "added_at": "2024-03-08T20:00:00Z",
+      "genres": [3, 6]
+    }
+  },
+  {
+    "model": "quering.Season",
+    "pk": 1,
+    "fields": {
+      "show": 1,
+      "season_number": 1,
+      "release_year": 2008
+    }
+  },
+  {
+    "model": "quering.Season",
+    "pk": 2,
+    "fields": {
+      "show": 1,
+      "season_number": 2,
+      "release_year": 2009
+    }
+  },
+  {
+    "model": "quering.Season",
+    "pk": 3,
+    "fields": {
+      "show": 2,
+      "season_number": 1,
+      "release_year": 2011
+    }
+  },
+  {
+    "model": "quering.Season",
+    "pk": 4,
+    "fields": {
+      "show": 2,
+      "season_number": 2,
+      "release_year": 2012
+    }
+  },
+  {
+    "model": "quering.Season",
+    "pk": 5,
+    "fields": {
+      "show": 3,
+      "season_number": 1,
+      "release_year": 2016
+    }
+  },
+  {
+    "model": "quering.Season",
+    "pk": 6,
+    "fields": {
+      "show": 3,
+      "season_number": 2,
+      "release_year": 2017
+    }
+  },
+  {
+    "model": "quering.Season",
+    "pk": 7,
+    "fields": {
+      "show": 4,
+      "season_number": 1,
+      "release_year": 2019
+    }
+  },
+  {
+    "model": "quering.Season",
+    "pk": 8,
+    "fields": {
+      "show": 5,
+      "season_number": 1,
+      "release_year": 2010
+    }
+  },
+  {
+    "model": "quering.Season",
+    "pk": 9,
+    "fields": {
+      "show": 6,
+      "season_number": 1,
+      "release_year": 2005
+    }
+  },
+  {
+    "model": "quering.Season",
+    "pk": 10,
+    "fields": {
+      "show": 7,
+      "season_number": 1,
+      "release_year": 1994
+    }
+  },
+  {
+    "model": "quering.Season",
+    "pk": 11,
+    "fields": {
+      "show": 8,
+      "season_number": 1,
+      "release_year": 2013
+    }
+  },
+  {
+    "model": "quering.Episode",
+    "pk": 1,
+    "fields": {
+      "show": 1,
+      "season": 1,
+      "title": "Pilot",
+      "episode_number": 1,
+      "duration": 58,
+      "release_date": "2008-01-20"
+    }
+  },
+  {
+    "model": "quering.Episode",
+    "pk": 2,
+    "fields": {
+      "show": 2,
+      "season": 1,
+      "title": "Winter Is Coming",
+      "episode_number": 1,
+      "duration": 62,
+      "release_date": "2011-04-17"
+    }
+  },
+  {
+    "model": "quering.Episode",
+    "pk": 3,
+    "fields": {
+      "show": 3,
+      "season": 1,
+      "title": "Chapter One: The Vanishing of Will Byers",
+      "episode_number": 1,
+      "duration": 48,
+      "release_date": "2016-07-15"
+    }
+  },
+  {
+    "model": "quering.Episode",
+    "pk": 4,
+    "fields": {
+      "show": 4,
+      "season": 1,
+      "title": "The End's Beginning",
+      "episode_number": 1,
+      "duration": 61,
+      "release_date": "2019-12-20"
+    }
+  },
+  {
+    "model": "quering.Episode",
+    "pk": 5,
+    "fields": {
+      "show": 5,
+      "season": 1,
+      "title": "A Study in Pink",
+      "episode_number": 1,
+      "duration": 88,
+      "release_date": "2010-07-25"
+    }
+  },
+  {
+    "model": "quering.Episode",
+    "pk": 6,
+    "fields": {
+      "show": 6,
+      "season": 1,
+      "title": "Pilot",
+      "episode_number": 1,
+      "duration": 23,
+      "release_date": "2005-03-24"
+    }
+  },
+  {
+    "model": "quering.Episode",
+    "pk": 7,
+    "fields": {
+      "show": 7,
+      "season": 1,
+      "title": "The One Where Monica Gets a Roommate",
+      "episode_number": 1,
+      "duration": 22,
+      "release_date": "1994-09-22"
+    }
+  },
+  {
+    "model": "quering.Episode",
+    "pk": 8,
+    "fields": {
+      "show": 8,
+      "season": 1,
+      "title": "Chapter 1",
+      "episode_number": 1,
+      "duration": 55,
+      "release_date": "2013-02-01"
+    }
+  },
     {
       "model": "quering.Actor",
       "pk": 1,
       "fields": {
         "full_name": "Vin Diesel",
         "date_of_birth": "1967-07-18",
+        "nationality": "American"
+      }
+    },
+    {
+      "model": "quering.Actor",
+      "pk": 2,
+      "fields": {
+        "full_name": "Leonardo DiCaprio",
+        "date_of_birth": "1974-11-11",
+        "nationality": "American"
+      }
+    },
+    {
+      "model": "quering.Actor",
+      "pk": 3,
+      "fields": {
+        "full_name": "Scarlett Johansson",
+        "date_of_birth": "1984-11-22",
         "nationality": "American"
       }
     },
@@ -110,6 +631,24 @@
       }
     },
     {
+      "model": "quering.MovieCast",
+      "pk": 2,
+      "fields": {
+        "movie": 2,
+        "actor": 2,
+        "role": "Jack Dawson"
+      }
+    },
+    {
+      "model": "quering.MovieCast",
+      "pk": 3,
+      "fields": {
+        "movie": 3,
+        "actor": 3,
+        "role": "Natasha Romanoff"
+      }
+    },
+    {
       "model": "quering.SubscriptionPlan",
       "pk": 1,
       "fields": {
@@ -117,6 +656,26 @@
         "price": "9.99",
         "resolution": "HD",
         "max_screens": 1
+      }
+    },
+    {
+      "model": "quering.SubscriptionPlan",
+      "pk": 2,
+      "fields": {
+        "name": "Standard",
+        "price": "14.99",
+        "resolution": "Full HD",
+        "max_screens": 2
+      }
+    },
+    {
+      "model": "quering.SubscriptionPlan",
+      "pk": 3,
+      "fields": {
+        "name": "Premium",
+        "price": "19.99",
+        "resolution": "4K",
+        "max_screens": 4
       }
     },
     {
@@ -142,6 +701,17 @@
       }
     },
     {
+      "model": "quering.WatchHistory",
+      "pk": 2,
+      "fields": {
+        "user": 2,
+        "movie": 2,
+        "watched_on": "2024-03-02T16:30:00Z",
+        "progress_percentage": 80,
+        "completed": false
+      }
+    },
+    {
       "model": "quering.UserRating",
       "pk": 1,
       "fields": {
@@ -150,6 +720,17 @@
         "rating": 8,
         "review": "Exciting and action-packed!",
         "created_at": "2024-03-01T15:00:00Z"
+      }
+    },
+    {
+      "model": "quering.UserRating",
+      "pk": 2,
+      "fields": {
+        "user": 2,
+        "movie": 2,
+        "rating": 9,
+        "review": "Amazing story and visuals!",
+        "created_at": "2024-03-02T18:00:00Z"
       }
     },
     {
@@ -183,4 +764,4 @@
         "event_timestamp": "2024-03-01T18:00:00Z"
       }
     }
-  ]
+]

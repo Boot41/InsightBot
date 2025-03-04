@@ -101,8 +101,13 @@ const QueryInterface = () => {
       console.log('Generated SQL query:', res.data.sql_query);
     
       if (res.status === 200) {
-        // Fix: Remove extra backslashes from SQL query
-        const cleanedQuery = res.data.sql_query.replace(/\\_/g, "_").replace(/\\\\/g, "\\");
+        let cleanedQuery = res.data.sql_query;
+    
+        // Fix: Remove extra backslashes
+        cleanedQuery = cleanedQuery.replace(/\\_/g, "_").replace(/\\\\/g, "\\");
+    
+        // Fix: Remove Markdown code block formatting
+        cleanedQuery = cleanedQuery.replace(/```sql\n?/g, "").replace(/```/g, "").trim();
     
         setSqlQuery(cleanedQuery);
         setShowResults(true);
@@ -236,7 +241,7 @@ const QueryInterface = () => {
               {/* Dynamic Layout for Results */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 {/* Data Table - Spans 2 columns */}
-                <div className="md:col-span-2">
+                <div className="md:col-span-3">
                   <h2 className="text-xl font-bold mb-3 gradient-text">Raw Data</h2>
                   <div className="card overflow-x-auto h-[500px]">
                     <table className="min-w-full divide-y divide-gray-200">
