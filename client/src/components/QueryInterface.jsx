@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FiSend, FiArrowLeft, FiDatabase, FiBarChart2, FiPieChart, FiTrendingUp, FiInfo, FiEdit2, FiArrowUpCircle } from 'react-icons/fi';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
@@ -62,6 +62,8 @@ const QueryInterface = () => {
   const [sqlQuery, setSqlQuery] = useState(mockSqlQuery);
   const [showResults, setShowResults] = useState(false);
   const [isEditingSql, setIsEditingSql] = useState(false);
+  const [queryResults, setQueryResults] = useState(null); // State to store query results
+  const [tableData, setTableData] = useState(null);
   const sqlEditorRef = useRef(null);
 
   const handleSubmit = async (e) => {
@@ -94,22 +96,26 @@ const QueryInterface = () => {
         natural_language: query,
         db_config: dbConfig
       });
-
+    
       console.log('Response from backend:', res.data);
-      console.log('Generated SQL query:',res.data.sql_query)
-
+      console.log('Generated SQL query:', res.data.sql_query);
+    
       if (res.status === 200) {
-        setSqlQuery(res.data.sql_query);
+        // Fix: Remove extra backslashes from SQL query
+        const cleanedQuery = res.data.sql_query.replace(/\\_/g, "_").replace(/\\\\/g, "\\");
+    
+        setSqlQuery(cleanedQuery);
         setShowResults(true);
       } else {
         console.error('Error generating SQL:', res.status, res.data);
         alert(`Error generating SQL. Status: ${res.status}. See console.`);
       }
-
+    
     } catch (error) {
       console.error('Error sending query:', error);
       alert('Failed to send query. Check console for error.');
     }
+    
 
     setShowResults(true);
   };
@@ -150,6 +156,7 @@ const QueryInterface = () => {
 
       if (res.status === 200) {
         setQueryResults(res.data.results || res.data.affected_rows || {message: 'Query executed successfully'}); // Handle different response types
+        console.log('Query result : ', queryResults);
         setShowResults(true); // Keep results section visible or update as needed
       } else {
         console.error('Error running SQL query:', res.status, res.data);
@@ -180,6 +187,10 @@ const QueryInterface = () => {
       }
     }, 0);
   };
+
+  useEffect(() => {
+    setTableData(queryResults);
+  }, [queryResults]);
 
   return (
     <div className="min-h-screen flex flex-col query-interface">
@@ -231,21 +242,27 @@ const QueryInterface = () => {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="sticky top-0 bg-white">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-dark-500 uppercase tracking-wider">Title</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-dark-500 uppercase tracking-wider">Genre</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-dark-500 uppercase tracking-wider">Year</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-dark-500 uppercase tracking-wider">Rating</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-dark-500 uppercase tracking-wider">Streams</th>
+                          {tableData && tableData[0] && Object.keys(tableData[0]).map((header) => (
+                            <th
+                              key={header}
+                              className="px-6 py-3 text-left text-xs font-medium text-dark-500 uppercase tracking-wider"
+                            >
+                              {header}
+                            </th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {movieData.map((movie) => (
-                          <tr key={movie.id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark-900">{movie.title}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-dark-700">{movie.genre}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-dark-700">{movie.year}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-dark-700">{movie.rating}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-dark-700">{movie.streams.toLocaleString()}</td>
+                        {tableData && tableData.map((row, index) => (
+                          <tr key={index}>
+                            {Object.values(row).map((cell, cellIndex) => (
+                              <td
+                                key={cellIndex}
+                                className="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark-900"
+                              >
+                                {cell}
+                              </td>
+                            ))}
                           </tr>
                         ))}
                       </tbody>
