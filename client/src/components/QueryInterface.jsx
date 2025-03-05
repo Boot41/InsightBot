@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiSend, FiArrowLeft, FiDatabase, FiBarChart2, FiPieChart, FiTrendingUp, FiInfo, FiEdit2, FiArrowUpCircle } from 'react-icons/fi';
+import { FiSend, FiArrowLeft, FiDatabase, FiBarChart2, FiPieChart, FiTrendingUp, FiInfo, FiEdit2, FiArrowUpCircle, FiArrowDownCircle } from 'react-icons/fi';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
   LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -11,30 +11,30 @@ import CustomPieChart from './CustomPieChart';
 import CustomLineChart from './CustomLineChart';
 
 
-const barChartData = {
-  xlabel: "Products",
-  ylabel: "Sales",
-  xvalues: ["Laptop", "Phone", "Tablet", "Monitor", "Keyboard"],
-  yvalues: [500, 800, 300, 600, 400],
-};
+// const barChartData = {
+//   xlabel: "Products",
+//   ylabel: "Sales",
+//   xvalues: ["Laptop", "Phone", "Tablet", "Monitor", "Keyboard"],
+//   yvalues: [500, 800, 300, 600, 400],
+// };
 
-// Genre data for pie chart
-const pieChartData = {
-  xlabel: "Movies by Genre",
-  values: [
-    { name: "Action", value: 40 },
-    { name: "Comedy", value: 30 },
-    { name: "Drama", value: 20 },
-    { name: "Sci-Fi", value: 10 },
-  ],
-};
+// // Genre data for pie chart
+// const pieChartData = {
+//   xlabel: "Movies by Genre",
+//   values: [
+//     { name: "Action", value: 40 },
+//     { name: "Comedy", value: 30 },
+//     { name: "Drama", value: 20 },
+//     { name: "Sci-Fi", value: 10 },
+//   ],
+// };
 
-const lineChartData = {
-  xlabel: "Year",
-  ylabel: "Average Temperature (°C)",
-  xvalues: ["2000", "2005", "2010", "2015", "2020"],
-  yvalues: [14.5, 14.8, 12.1, 15.4, 15.8],
-};
+// const lineChartData = {
+//   xlabel: "Year",
+//   ylabel: "Average Temperature (°C)",
+//   xvalues: ["2000", "2005", "2010", "2015", "2020"],
+//   yvalues: [14.5, 14.8, 12.1, 15.4, 15.8],
+// };
 
 const QueryInterface = () => {
   const [query, setQuery] = useState('');
@@ -45,14 +45,19 @@ const QueryInterface = () => {
   const [tableData, setTableData] = useState(null);
   const sqlEditorRef = useRef(null);
 
-  const handleSubmit = async (e) => {
+  const [barChartData, setBarChartData] = useState(null);
+  const [pieChartData, setPieChartData] = useState(null);
+  const [lineChartData, setLineChartData] = useState(null);
+
+
+  const handleSubmit = async (e, errorHandling = false) => {
     e.preventDefault();
     console.log('Query submitted:', query);
-
+  
     // Fetch dbConfig from localStorage
     const storedDbConfig = localStorage.getItem('connectionFormData');
     let dbConfig;
-
+  
     if (storedDbConfig) {
       dbConfig = JSON.parse(storedDbConfig);
       // Rename keys to match backend expectation if necessary
@@ -68,22 +73,15 @@ const QueryInterface = () => {
       alert('No database connection configured. Please connect to a database first.');
       return; // Stop submission if no dbConfig is found
     }
-
-
+  
     try {
       const res = await axios.post('http://localhost:8000/api/generate-sql/', {
         natural_language: query,
-        db_config: dbConfig
+        db_config: dbConfig,
+        ...(errorHandling ? { error: true } : {}) // Include error param if errorHandling is true
       });
     
-      console.log('Response from backend:', res.data);// Mock AI insights
-      const mockInsights = [
-        "Sci-Fi movies make up 30% of the top-rated films but generate 35% of total streams.",
-        "Movies from the 1990s have consistently high ratings, averaging 8.8/10.",
-        "The Dark Knight (2008) has the highest number of streams despite not having the highest rating.",
-        "Crime genre films have maintained popularity across decades, appearing in the 1970s, 1990s, and 2010s."
-      ];
-      
+      console.log('Response from backend:', res.data);
       console.log('Generated SQL query:', res.data.sql_query);
     
       if (res.status === 200) {
@@ -107,14 +105,14 @@ const QueryInterface = () => {
       alert('Failed to send query. Check console for error.');
     }
     
-
     setShowResults(true);
   };
+  
   const runQuery = async () => {
     // Fetch dbConfig from localStorage (same logic as in handleSubmit)
     const storedDbConfig = localStorage.getItem('connectionFormData');
     let dbConfig;
-
+  
     if (storedDbConfig) {
       dbConfig = JSON.parse(storedDbConfig);
       dbConfig = {
@@ -129,36 +127,55 @@ const QueryInterface = () => {
       alert('No database connection configured. Please connect to a database first.');
       return;
     }
-
+  
     if (!sqlQuery) {
       alert('No SQL query to run. Generate a query first.');
       return;
     }
-
+  
     console.log('Running SQL query:', sqlQuery);
-
+  
     try {
       const res = await axios.post('http://localhost:8000/api/raw-sql/', {
         query: sqlQuery, // Use the current sqlQuery state
         db_config: dbConfig
       });
-
+  
       console.log('Response from backend (raw-sql):', res.data);
-
+  
       if (res.status === 200) {
-        setQueryResults(res.data.results || res.data.affected_rows || {message: 'Query executed successfully'}); // Handle different response types
+        setQueryResults(res.data.results || res.data.affected_rows || { message: 'Query executed successfully' });
         console.log('Query result : ', queryResults);
-        setShowResults(true); // Keep results section visible or update as needed
+        setShowResults(true);
       } else {
-        console.error('Error running SQL query:', res.status, res.data);
-        alert(`Error running SQL query. Status: ${res.status}. See console.`);
+        // Check if error message indicates a missing relation
+        if (res.data.error && res.data.error.includes('does not exist')) {
+          console.warn('Detected missing relation error. Re-generating SQL with error handling.');
+          // Call handleSubmit again with error flag set
+          handleSubmit({ preventDefault: () => {} }, true);
+          return;
+        } else {
+          console.error('Error running SQL query:', res.status, res.data);
+          alert(`Error running SQL query. Status: ${res.status}. See console.`);
+        }
       }
-
     } catch (error) {
+      // If we get a 400 error with a message, attempt to re-generate SQL with error handling
+      if (
+        error.response &&
+        error.response.status === 400 &&
+        error.response.data.error &&
+        error.response.data.error.includes('does not exist')
+      ) {
+        console.warn('Caught error in raw-sql call. Re-generating SQL with error handling.');
+        handleSubmit({ preventDefault: () => {} }, true);
+        return;
+      }
       console.error('Error sending query (raw-sql):', error);
       alert('Failed to send query (raw-sql). Check console for error.');
     }
   };
+  
 
   const handleSqlEdit = () => {
     if(isEditingSql){
@@ -173,10 +190,94 @@ const QueryInterface = () => {
     }, 0);
   };
 
+  const fetchVisualizationData = async (results) => {
+    if(!results.length==0){
+      try {
+        const visRes = await axios.post('http://localhost:8000/api/generate-visualizations/', {
+            dataset: results
+        });
+
+        console.log('Visualization API Response:', visRes.data);
+
+        if (visRes.status === 200) {
+            // The response is already an object, so no need to JSON.parse
+            const visualizations = visRes.data.visualizations;
+
+            // Reset all charts to null first
+            setBarChartData(null);
+            setPieChartData(null);
+            setLineChartData(null);
+
+            // Loop through response and update state
+            visualizations.forEach((vis) => {
+                if (vis && vis.type === 'bar') setBarChartData(vis.data);
+                if (vis && vis.type === 'pie') setPieChartData(vis.data);
+                if (vis && vis.type === 'line') setLineChartData(vis.data);
+            });
+            console.log(barChartData, pieChartData, lineChartData);
+        } else {
+            console.error('Error fetching visualizations:', visRes.status, visRes.data);
+        }
+    } catch (error) {
+        console.error('Error fetching visualization data:', error);
+        alert('Failed to fetch visualization data.');
+    }
+    }
+
+};
+
+const exportTableDataToCSV = (tableData, filename = "export.csv") => {
+  if (!tableData || tableData.length === 0) {
+    alert("No data available to export.");
+    return;
+  }
+
+  // Get CSV headers from the keys of the first object
+  const headers = Object.keys(tableData[0]);
+  const csvRows = [];
+
+  // Add header row
+  csvRows.push(headers.join(","));
+
+  // Add data rows
+  tableData.forEach(row => {
+    const values = headers.map(header => {
+      let cell = row[header];
+      if (cell == null) cell = "";
+      cell = cell.toString().trim();
+      // Escape double quotes by doubling them
+      cell = cell.replace(/"/g, '""');
+      // Wrap cell value in quotes if it contains commas, quotes, or newlines
+      if (cell.search(/("|,|\n)/g) >= 0) {
+        cell = `"${cell}"`;
+      }
+      return cell;
+    });
+    csvRows.push(values.join(","));
+  });
+
+  // Join all rows with new line characters
+  const csvString = csvRows.join("\n");
+
+  // Create a Blob from the CSV string and a temporary link to download it
+  const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+
   useEffect(() => {
     setTableData(queryResults);
   }, [queryResults]);
 
+  useEffect(() => {
+    fetchVisualizationData(queryResults);
+  }, [tableData]);
   return (
     <div className="min-h-screen flex flex-col query-interface">
       {/* Header */}
@@ -221,8 +322,18 @@ const QueryInterface = () => {
               {/* Dynamic Layout for Results */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 {/* Data Table - Spans 2 columns */}
+                
                 <div className="md:col-span-3">
-                  <h2 className="text-xl font-bold mb-3 gradient-text">Raw Data</h2>
+                <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xl font-bold mb-3 gradient-text">Raw Data</h2>
+                  <button
+                    onClick={() => exportTableDataToCSV(tableData)}
+                    className="flex items-center gap-2 text-primary-600 hover:text-primary-700"
+                  >
+                    Export CSV <FiArrowDownCircle className="w-5 h-5" />
+                  </button>
+                  </div>
+                  
                   <div className="card overflow-x-auto h-[500px]">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="sticky top-0 bg-white">
@@ -282,11 +393,12 @@ const QueryInterface = () => {
                 <h2 className="text-xl font-bold mb-3 gradient-text">Visualizations</h2>
                 
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-9">
-                  <CustomBarChart data={barChartData} />
 
-                  <CustomPieChart data={pieChartData} />
+                  {barChartData && <CustomBarChart data={barChartData} />}
 
-                  <CustomLineChart data={lineChartData} />
+                  {pieChartData && <CustomPieChart data={pieChartData} />}
+
+                  {lineChartData && <CustomLineChart data={lineChartData} />}
                 </div>
               </div>
             </motion.div>

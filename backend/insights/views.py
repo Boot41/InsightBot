@@ -239,6 +239,7 @@ def generate_sql_query(request):
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
          
 def get_db_schema(db_config):
+
     """Helper function to get database schema"""
     try:
         # Extract credentials
@@ -303,3 +304,62 @@ def get_db_schema(db_config):
 
     except Exception as e:
         raise Exception(f'Error getting database schema: {str(e)}')
+
+@api_view(['POST'])
+def generate_visualization_data(request):
+    try:
+        dataset = request.data.get('dataset')
+        if not dataset:
+            return Response({'error': 'Dataset is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
+
+        prompt = f"""Analyze the provided dataset and determine the appropriate visualizations.
+            If a certain type of graph (bar, pie, line) is not possible, return null data for it.
+            If multiple graphs of the same type are possible, return multiple objects.
+            Provide ONLY the JSON output in the following format:
+            [
+                {{ "type": "bar", "data": {{ "xlabel": "", "ylabel": "", "xvalues": [], "yvalues": [] }} }},
+                {{ "type": "pie", "data": {{ "xlabel": "", "values": [] }} }},
+                {{ "type": "line", "data": {{ "xlabel": "", "ylabel": "", "xvalues": [], "yvalues": [] }} }}
+            ]
+
+            Here is the dataset: {dataset}
+            Generate the most relevant and meaningful visualizations based on the dataset, and output ONLY valid JSON without any extra commentary or explanations."""
+        
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a data visualization expert. Output ONLY valid JSON for visualizations in the requested format, without any commentary or extra text."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            model="mixtral-8x7b-32768",
+            temperature=0,
+            max_tokens=1500,
+        )
+
+        raw_output = chat_completion.choices[0].message.content.strip()
+
+        # Attempt to extract only the JSON array from the response
+        start_index = raw_output.find('[')
+        end_index = raw_output.rfind(']')
+        if start_index != -1 and end_index != -1:
+            json_str = raw_output[start_index:end_index+1]
+            try:
+                visualization_json = json.loads(json_str)
+            except Exception as e:
+                return Response({'error': f'Failed to parse JSON: {e}', 'raw': raw_output}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'error': 'No JSON array found in response', 'raw': raw_output}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'visualizations': visualization_json,
+        })
+
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

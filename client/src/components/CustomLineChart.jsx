@@ -24,7 +24,13 @@ const CustomLineChart = ({ data }) => {
             labelFormatter={(label) => label} 
           />
           <Legend />
-          <Line type="monotone" dataKey="yValue" stroke="#7c3aed" activeDot={{ r: 8 }} />
+          <Line 
+            type="monotone" 
+            dataKey="yValue" 
+            stroke="#7c3aed" 
+            activeDot={{ r: 8 }} 
+            connectNulls  // This prop connects the line across null values
+          />
         </LineChart>
       </ResponsiveContainer>
     </div>
