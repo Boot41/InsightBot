@@ -239,6 +239,7 @@ def generate_sql_query(request):
 
         return Response({
             'sql_query': sql_query,
+            'schema': schema_info
         })
 
     except Exception as e:

@@ -1,105 +1,98 @@
-import { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { FiSend, FiArrowLeft, FiDatabase, FiBarChart2, FiPieChart, FiTrendingUp, FiInfo, FiEdit2, FiArrowUpCircle, FiArrowDownCircle } from 'react-icons/fi';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
-  LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { FiArrowLeft, FiDatabase, FiArrowDownCircle, FiSend, FiArrowUpCircle, FiEdit2, FiX, FiPlus } from 'react-icons/fi';
+import { motion } from 'framer-motion';
+import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import CustomBarChart from './CustomBarChart';
 import CustomPieChart from './CustomPieChart';
 import CustomLineChart from './CustomLineChart';
 
-
 const QueryInterface = () => {
-  const [query, setQuery] = useState('');
-  const [sqlQuery, setSqlQuery] = useState("");
-  const [showVisualisations, setShowVisualisations] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const [isEditingSql, setIsEditingSql] = useState(false);
-  const [queryResults, setQueryResults] = useState(null); // State to store query results
-  const [tableData, setTableData] = useState(null);
-  const [selectQuery, setSelectQuery] = useState(true);
+  // Initialize tabs state; each tab stores its own query & result data.
+  const [tabs, setTabs] = useState([
+    {
+      id: 1,
+      name: 'Query 1',
+      query: '',
+      sqlQuery: '',
+      showVisualisations: false,
+      showResults: false,
+      isEditingSql: false,
+      queryResults: null,
+      tableData: null,
+      selectQuery: true,
+      barChartData: null,
+      pieChartData: null,
+      lineChartData: null,
+      isLoading: false,
+    }
+  ]);
+  const [activeTabId, setActiveTabId] = useState(1);
+  const [nextTabId, setNextTabId] = useState(2);
   const sqlEditorRef = useRef(null);
 
-  const [barChartData, setBarChartData] = useState(null);
-  const [pieChartData, setPieChartData] = useState(null);
-  const [lineChartData, setLineChartData] = useState(null);
+  // Helper functions to get and update the active tab
+  const getActiveTab = () => tabs.find(tab => tab.id === activeTabId);
 
+  const updateActiveTab = (updates) => {
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) =>
+        tab.id === activeTabId ? { ...tab, ...updates } : tab
+      )
+    );
+  };
+   
+  // Tab management functions
+  const addNewTab = () => {
+    const newTab = {
+      id: nextTabId,
+      name: `Query ${nextTabId}`,
+      query: '',
+      sqlQuery: '',
+      showVisualisations: false,
+      showResults: false,
+      isEditingSql: false,
+      queryResults: null,
+      tableData: null,
+      selectQuery: true,
+      barChartData: null,
+      pieChartData: null,
+      lineChartData: null,
+      isLoading: false,
+    };
+    setTabs([...tabs, newTab]);
+    setActiveTabId(nextTabId);
+    setNextTabId(nextTabId + 1);
+  };
+
+  const closeTab = (tabId, event) => {
+    event.stopPropagation();
+    if (tabs.length > 1) {
+      const newTabs = tabs.filter(tab => tab.id !== tabId);
+      setTabs(newTabs);
+      if (activeTabId === tabId) {
+        setActiveTabId(newTabs[newTabs.length - 1].id);
+      }
+    }
+  };
+
+  const switchTab = (tabId) => {
+    setActiveTabId(tabId);
+  };
+
+  // ---------------------------
+  // API CALLS & EVENT HANDLERS
+  // ---------------------------
 
   const handleSubmit = async (e, errorHandling = null) => {
     e.preventDefault();
-    console.log('Query submitted:', query);
-  
-    // Fetch dbConfig from localStorage
+    const activeTab = getActiveTab();
+    console.log('Query submitted:', activeTab.query);
+
+    // Get dbConfig from localStorage
     const storedDbConfig = localStorage.getItem('connectionFormData');
     let dbConfig;
-  
-    if (storedDbConfig) {
-      dbConfig = JSON.parse(storedDbConfig);
-      // Rename keys to match backend expectation if necessary
-      dbConfig = {
-        name: dbConfig.database, // Assuming 'database' in localStorage maps to 'name' for backend
-        user: dbConfig.username, // Assuming 'username' in localStorage maps to 'user' for backend
-        password: dbConfig.password,
-        host: dbConfig.host,
-        port: dbConfig.port || '5432' // Default port if not in localStorage
-      };
-    } else {
-      console.error('No database configuration found in localStorage.');
-      alert('No database connection configured. Please connect to a database first.');
-      return; // Stop submission if no dbConfig is found
-    }
-  
-    try {
-      const res = await axios.post('http://localhost:8000/api/generate-sql/', {
-        natural_language: query,
-        db_config: dbConfig,
-        ...(errorHandling ? { error: errorHandling } : {}) // Pass the error message if provided
-      });
-    
-      console.log('Response from backend:', res.data);
-      console.log('Generated SQL query:', res.data.sql_query);
-    
-      if (res.status === 200) {
-        let cleanedQuery = res.data.sql_query;
-        
-        // Collapse multiple backslashes into one
-        cleanedQuery = cleanedQuery.replace(/\\+/g, "\\");
-        
-        // Remove backslashes preceding asterisks and underscores
-        cleanedQuery = cleanedQuery
-          .replace(/\\\*/g, "*")  // Remove backslash before asterisk
-          .replace(/\\_/g, "_");  // Remove backslash before underscore
-        
-        // Remove Markdown code block formatting
-        cleanedQuery = cleanedQuery
-          .replace(/```sql\n?/g, "")
-          .replace(/```/g, "")
-          .trim();
-    
-        setSqlQuery(cleanedQuery);
-        setShowResults(true);
-      } else {
-        console.error('Error generating SQL:', res.status, res.data);
-        alert(`Error generating SQL. Status: ${res.status}. See console.`);
-      }
-    
-    } catch (error) {
-      console.error('Error sending query:', error);
-      alert('Failed to send query. Check console for error.');
-    }
-    
-    setShowResults(true);
-  };
-  
-  
-  
-  const runQuery = async () => {
-    // Fetch dbConfig from localStorage (same logic as in handleSubmit)
-    const storedDbConfig = localStorage.getItem('connectionFormData');
-    let dbConfig;
-  
     if (storedDbConfig) {
       dbConfig = JSON.parse(storedDbConfig);
       dbConfig = {
@@ -114,40 +107,84 @@ const QueryInterface = () => {
       alert('No database connection configured. Please connect to a database first.');
       return;
     }
-  
-    if (!sqlQuery) {
+
+    try {
+      const res = await axios.post('http://localhost:8000/api/generate-sql/', {
+        natural_language: activeTab.query,
+        db_config: dbConfig,
+        ...(errorHandling ? { error: errorHandling } : {})
+      });
+
+      console.log('Response from backend:', res.data);
+      if (res.status === 200) {
+        let cleanedQuery = res.data.sql_query;
+        // Clean up the SQL string
+        cleanedQuery = cleanedQuery.replace(/\\+/g, "\\")
+          .replace(/\\\*/g, "*")
+          .replace(/\\_/g, "_")
+          .replace(/```sql\n?/g, "")
+          .replace(/```/g, "")
+          .trim();
+        updateActiveTab({ sqlQuery: cleanedQuery, showResults: true });
+      } else {
+        console.error('Error generating SQL:', res.status, res.data);
+        alert(`Error generating SQL. Status: ${res.status}. See console.`);
+      }
+    } catch (error) {
+      console.error('Error sending query:', error);
+      alert('Failed to send query. Check console for error.');
+    }
+    updateActiveTab({ showResults: true });
+  };
+
+  const runQuery = async () => {
+    const activeTab = getActiveTab();
+    // Get dbConfig from localStorage
+    const storedDbConfig = localStorage.getItem('connectionFormData');
+    let dbConfig;
+    if (storedDbConfig) {
+      dbConfig = JSON.parse(storedDbConfig);
+      dbConfig = {
+        name: dbConfig.database,
+        user: dbConfig.username,
+        password: dbConfig.password,
+        host: dbConfig.host,
+        port: dbConfig.port || '5432'
+      };
+    } else {
+      console.error('No database configuration found in localStorage.');
+      alert('No database connection configured. Please connect to a database first.');
+      return;
+    }
+
+    if (!activeTab.sqlQuery) {
       alert('No SQL query to run. Generate a query first.');
       return;
     }
-  
-    console.log('Running SQL query:', sqlQuery);
-  
+
+    console.log('Running SQL query:', activeTab.sqlQuery);
     try {
       const res = await axios.post('http://localhost:8000/api/raw-sql/', {
-        query: sqlQuery, // Use the current sqlQuery state
+        query: activeTab.sqlQuery,
         db_config: dbConfig
       });
-  
+
       console.log('Response from backend (raw-sql):', res.data);
-  
       if (res.status === 200) {
         let results;
         if (res.data.results) {
           results = res.data.results;
-          setSelectQuery(true); // This is a SELECT query.
+          updateActiveTab({ queryResults: results, selectQuery: true, showResults: true });
         } else if (typeof res.data.affected_rows !== 'undefined') {
           results = { message: `Affected rows: ${res.data.affected_rows}` };
-          setSelectQuery(false); // Non-SELECT query: show alert.
+          updateActiveTab({ queryResults: results, selectQuery: false, showResults: true });
         } else {
           results = { message: 'Query executed successfully.' };
+          updateActiveTab({ queryResults: results, showResults: true });
         }
-        setQueryResults(results);
-        setShowResults(true);
       } else {
-        // Check if error message indicates a missing relation
         if (res.data.error && res.data.error.includes('does not exist')) {
           console.warn('Detected missing relation error. Re-generating SQL with error handling.');
-          // Call handleSubmit again with the actual error message
           handleSubmit({ preventDefault: () => {} }, res.data.error);
           return;
         } else {
@@ -156,7 +193,6 @@ const QueryInterface = () => {
         }
       }
     } catch (error) {
-      // If we get a 400 error with a message, attempt to re-generate SQL with error handling
       if (
         error.response &&
         error.response.status === 400 &&
@@ -171,14 +207,10 @@ const QueryInterface = () => {
       alert('Failed to send query (raw-sql). Check console for error.');
     }
   };
-  
 
   const handleSqlEdit = () => {
-    if(isEditingSql){
-      setIsEditingSql(false)
-    }else{
-      setIsEditingSql(true)
-    }
+    const activeTab = getActiveTab();
+    updateActiveTab({ isEditingSql: !activeTab.isEditingSql });
     setTimeout(() => {
       if (sqlEditorRef.current) {
         sqlEditorRef.current.focus();
@@ -187,106 +219,107 @@ const QueryInterface = () => {
   };
 
   const fetchVisualizationData = async (results) => {
-    if(!results.length==0){
+    if (results && results.length > 0) {
       try {
         const visRes = await axios.post('http://localhost:8000/api/generate-visualizations/', {
-            dataset: results
+          dataset: results
         });
 
         console.log('Visualization API Response:', visRes.data);
-
         if (visRes.status === 200) {
-            // The response is already an object, so no need to JSON.parse
-            const visualizations = visRes.data.visualizations;
+          const visualizations = visRes.data.visualizations;
+          let newBarChartData = null;
+          let newPieChartData = null;
+          let newLineChartData = null;
 
-            // Reset all charts to null first
-            setBarChartData(null);
-            setPieChartData(null);
-            setLineChartData(null);
-
-            // Loop through response and update state
-            visualizations.forEach((vis) => {
-                if (vis && vis.type === 'bar') setBarChartData(vis.data);
-                if (vis && vis.type === 'pie') setPieChartData(vis.data);
-                if (vis && vis.type === 'line') setLineChartData(vis.data);
-            });
-            console.log(barChartData, pieChartData, lineChartData);
+          visualizations.forEach((vis) => {
+            if (vis && vis.type === 'bar') newBarChartData = vis.data;
+            if (vis && vis.type === 'pie') newPieChartData = vis.data;
+            if (vis && vis.type === 'line') newLineChartData = vis.data;
+          });
+          updateActiveTab({
+            barChartData: newBarChartData,
+            pieChartData: newPieChartData,
+            lineChartData: newLineChartData,
+          });
         } else {
-            console.error('Error fetching visualizations:', visRes.status, visRes.data);
+          console.error('Error fetching visualizations:', visRes.status, visRes.data);
         }
-    } catch (error) {
+      } catch (error) {
         console.error('Error fetching visualization data:', error);
         alert('Failed to fetch visualization data.');
-    }
-    }
-
-};
-
-const exportTableDataToCSV = (tableData, filename = "export.csv") => {
-  if (!tableData || tableData.length === 0) {
-    alert("No data available to export.");
-    return;
-  }
-
-  // Get CSV headers from the keys of the first object
-  const headers = Object.keys(tableData[0]);
-  const csvRows = [];
-
-  // Add header row
-  csvRows.push(headers.join(","));
-
-  // Add data rows
-  tableData.forEach(row => {
-    const values = headers.map(header => {
-      let cell = row[header];
-      if (cell == null) cell = "";
-      cell = cell.toString().trim();
-      // Escape double quotes by doubling them
-      cell = cell.replace(/"/g, '""');
-      // Wrap cell value in quotes if it contains commas, quotes, or newlines
-      if (cell.search(/("|,|\n)/g) >= 0) {
-        cell = `"${cell}"`;
       }
-      return cell;
-    });
-    csvRows.push(values.join(","));
-  });
-
-  // Join all rows with new line characters
-  const csvString = csvRows.join("\n");
-
-  // Create a Blob from the CSV string and a temporary link to download it
-  const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.setAttribute("download", filename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
-
-
-useEffect(() => {
-  setShowVisualisations(false);
-  if (queryResults !== null && queryResults !== undefined) {
-    if (selectQuery) {
-      setTableData(queryResults);
-    } else {
-      alert("Database Updated");
-      console.log("Database Updated");
     }
-  }
-}, [queryResults, selectQuery]);
+  };
 
+  const exportTableDataToCSV = (tableData, filename = "export.csv") => {
+    if (!tableData || tableData.length === 0) {
+      alert("No data available to export.");
+      return;
+    }
+    const headers = Object.keys(tableData[0]);
+    const csvRows = [];
+    csvRows.push(headers.join(","));
+    tableData.forEach(row => {
+      const values = headers.map(header => {
+        let cell = row[header];
+        if (cell == null) cell = "";
+        cell = cell.toString().trim();
+        cell = cell.replace(/"/g, '""');
+        if (cell.search(/("|,|\n)/g) >= 0) {
+          cell = `"${cell}"`;
+        }
+        return cell;
+      });
+      csvRows.push(values.join(","));
+    });
+    const csvString = csvRows.join("\n");
+    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
+  // ---------------------------
+  // SIDE EFFECTS
+  // ---------------------------
 
+  // Get the active tab from the tabs array.
+  const activeTab = tabs.find(tab => tab.id === activeTabId);
+
+  // Update table data when queryResults changes.
   useEffect(() => {
-    fetchVisualizationData(queryResults);
-  }, [tableData]);
+    if (activeTab && activeTab.queryResults !== null) {
+      if (activeTab.selectQuery) {
+        if (activeTab.tableData !== activeTab.queryResults) {
+          updateActiveTab({ tableData: activeTab.queryResults });
+        }
+      } else {
+        alert("Database Updated");
+        console.log("Database Updated");
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab?.queryResults]);
+
+  // Fetch visualizations when tableData updates.
+  useEffect(() => {
+    if (activeTab && activeTab.tableData) {
+      fetchVisualizationData(activeTab.tableData);
+    }
+  }, [activeTab?.tableData]);
+  
+
+  // ---------------------------
+  // RENDERING
+  // ---------------------------
   return (
     <div className="min-h-screen flex flex-col query-interface">
-      {/* Header */}
+      {/* Main Header */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-gray-100 py-4 px-6 shadow-sm">
         <div className="container mx-auto flex items-center justify-between">
           <div className="flex items-center">
@@ -302,9 +335,40 @@ useEffect(() => {
         </div>
       </header>
 
-      {/* Main content area - scrollable */}
+      {/* Tabs Navigation */}
+      <div className="bg-white rounded-t-lg shadow">
+        <div className="flex items-center space-x-2 p-2 overflow-x-auto">
+          {tabs.map(tab => (
+            <div
+              key={tab.id}
+              onClick={() => switchTab(tab.id)}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg cursor-pointer ${
+                activeTabId === tab.id
+                  ? 'bg-primary-100 text-primary-700'
+                  : 'hover:bg-gray-100'
+              }`}
+            >
+              <span>{tab.name}</span>
+              {tabs.length > 1 && (
+                <FiX
+                  className="h-4 w-4 text-gray-500 hover:text-red-500"
+                  onClick={(e) => closeTab(tab.id, e)}
+                />
+              )}
+            </div>
+          ))}
+          <button
+            onClick={addNewTab}
+            className="p-2 hover:bg-gray-100 rounded-lg"
+          >
+            <FiPlus className="h-5 w-5 text-gray-500" />
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
       <div className="flex-grow overflow-y-auto">
-        {!showResults ? (
+        {!activeTab?.showResults ? (
           <div className="h-full flex items-center justify-center">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -325,26 +389,24 @@ useEffect(() => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              {/* Dynamic Layout for Results */}
+              {/* Results Layout */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                {/* Data Table - Spans 2 columns */}
-                
+                {/* Raw Data Table */}
                 <div className="md:col-span-3">
-                <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xl font-bold mb-3 gradient-text">Raw Data</h2>
-                  <button
-                    onClick={() => exportTableDataToCSV(tableData)}
-                    className="flex items-center gap-2 text-primary-600 hover:text-primary-700"
-                  >
-                    Export CSV <FiArrowDownCircle className="w-5 h-5" />
-                  </button>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-xl font-bold mb-3 gradient-text">Raw Data</h2>
+                    <button
+                      onClick={() => exportTableDataToCSV(activeTab.tableData)}
+                      className="flex items-center gap-2 text-primary-600 hover:text-primary-700"
+                    >
+                      Export CSV <FiArrowDownCircle className="w-5 h-5" />
+                    </button>
                   </div>
-                  
                   <div className="card overflow-x-auto h-[500px]">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="sticky top-0 bg-white">
                         <tr>
-                          {tableData && tableData[0] && Object.keys(tableData[0]).map((header) => (
+                          {activeTab.tableData && activeTab.tableData[0] && Object.keys(activeTab.tableData[0]).map((header) => (
                             <th
                               key={header}
                               className="px-6 py-3 text-left text-xs font-medium text-dark-500 uppercase tracking-wider"
@@ -355,7 +417,7 @@ useEffect(() => {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {tableData && tableData.map((row, index) => (
+                        {activeTab.tableData && activeTab.tableData.map((row, index) => (
                           <tr key={index}>
                             {Object.values(row).map((cell, cellIndex) => (
                               <td
@@ -371,73 +433,72 @@ useEffect(() => {
                     </table>
                   </div>
                 </div>
-
               </div>
 
-              {/* Visualizations - Varied card sizes */}
-
-                <div className="mb-8">
+              {/* Visualizations */}
+              <div className="mb-8">
                 <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xl font-bold mb-3 gradient-text">Visualizations</h2>
-                <button onClick={() => setShowVisualisations(!showVisualisations)} className="flex items-center gap-2 text-primary-600 hover:text-primary-700"><FiArrowDownCircle/>Toggle</button>
+                  <h2 className="text-xl font-bold mb-3 gradient-text">Visualizations</h2>
+                  <button
+                    onClick={() =>
+                      updateActiveTab({ showVisualisations: !activeTab.showVisualisations })
+                    }
+                    className="flex items-center gap-2 text-primary-600 hover:text-primary-700"
+                  >
+                    <FiArrowDownCircle />Toggle
+                  </button>
                 </div>
-                {showVisualisations && (
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-9">
-
-                  {barChartData && <CustomBarChart data={barChartData} />}
-
-                  {pieChartData && <CustomPieChart data={pieChartData} />}
-
-                  {lineChartData && <CustomLineChart data={lineChartData} />}
-                </div>)}
+                {activeTab.showVisualisations && (
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-9">
+                    {activeTab.barChartData && <CustomBarChart data={activeTab.barChartData} />}
+                    {activeTab.pieChartData && <CustomPieChart data={activeTab.pieChartData} />}
+                    {activeTab.lineChartData && <CustomLineChart data={activeTab.lineChartData} />}
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>
         )}
       </div>
 
-      {/* Floating chat-style input at the bottom */}
+      {/* Floating Chat-Style Input */}
       <div className="fixed bottom-6 left-0 right-0 z-10 flex justify-center px-4">
         <div className="w-full max-w-3xl">
-          {showResults && (
+          {activeTab?.showResults && (
             <div className="bg-white rounded-2xl shadow-xl mb-3 overflow-hidden border border-gray-100">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <h3 className="text-sm font-medium text-dark-600">Generated SQL</h3>
-                
                 <div className="ml-auto flex items-center">
-                  <button 
+                  <button
                     onClick={runQuery}
                     className="text-primary-600 hover:text-primary-700 text-sm flex items-center mr-2"
                   >
                     <FiArrowUpCircle className="mr-1" size={14} />
                     FIRE
                   </button>
-                  <button 
+                  <button
                     onClick={handleSqlEdit}
                     className="text-primary-600 hover:text-primary-700 text-sm flex items-center mr-2"
                   >
                     <FiEdit2 className="mr-1" size={14} />
-                    {isEditingSql ? 'Cancel' : 'Edit SQL'}
+                    {activeTab.isEditingSql ? 'Cancel' : 'Edit SQL'}
                   </button>
-
                 </div>
               </div>
-              
-              {isEditingSql ? (
+              {activeTab.isEditingSql ? (
                 <div className="relative">
                   <textarea
                     ref={sqlEditorRef}
-                    value={sqlQuery}
-                    onChange={(e) => setSqlQuery(e.target.value)}
+                    value={activeTab.sqlQuery}
+                    onChange={(e) => updateActiveTab({ sqlQuery: e.target.value })}
                     className="w-full px-4 py-3 bg-gray-50 text-dark-900 font-mono text-sm h-24 border-none focus:ring-1 focus:ring-primary-400 focus:outline-none"
                   />
-                  
                 </div>
               ) : (
                 <div className="overflow-hidden">
                   <SyntaxHighlighter 
                     language="sql" 
-                    style={atomDark} 
+                    style={atomOneDark} 
                     customStyle={{
                       margin: 0,
                       padding: '12px 16px',
@@ -446,20 +507,20 @@ useEffect(() => {
                       borderRadius: 0
                     }}
                   >
-                    {sqlQuery}
+                    {activeTab.sqlQuery}
                   </SyntaxHighlighter>
                 </div>
               )}
             </div>
           )}
-          
-          {/* Chat-style input */}
+
+          {/* Chat-style Input */}
           <form onSubmit={handleSubmit} className="relative">
             <div className="bg-white rounded-full shadow-lg flex items-center pl-6 pr-2 py-2 border border-gray-100">
               <input
                 type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                value={activeTab.query}
+                onChange={(e) => updateActiveTab({ query: e.target.value })}
                 placeholder="Ask anything about your movie database..."
                 className="bg-transparent text-dark-800 placeholder-gray-500 flex-grow focus:outline-none text-sm"
               />
@@ -474,8 +535,8 @@ useEffect(() => {
           </form>
         </div>
       </div>
-      
-      {/* Add padding at the bottom to prevent content from being hidden behind the fixed input */}
+
+      {/* Bottom Padding to Prevent Hidden Content */}
       <div className="pb-60 md:pb-60"></div>
     </div>
   );
