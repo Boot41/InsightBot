@@ -11,38 +11,15 @@ import CustomPieChart from './CustomPieChart';
 import CustomLineChart from './CustomLineChart';
 
 
-// const barChartData = {
-//   xlabel: "Products",
-//   ylabel: "Sales",
-//   xvalues: ["Laptop", "Phone", "Tablet", "Monitor", "Keyboard"],
-//   yvalues: [500, 800, 300, 600, 400],
-// };
-
-// // Genre data for pie chart
-// const pieChartData = {
-//   xlabel: "Movies by Genre",
-//   values: [
-//     { name: "Action", value: 40 },
-//     { name: "Comedy", value: 30 },
-//     { name: "Drama", value: 20 },
-//     { name: "Sci-Fi", value: 10 },
-//   ],
-// };
-
-// const lineChartData = {
-//   xlabel: "Year",
-//   ylabel: "Average Temperature (°C)",
-//   xvalues: ["2000", "2005", "2010", "2015", "2020"],
-//   yvalues: [14.5, 14.8, 12.1, 15.4, 15.8],
-// };
-
 const QueryInterface = () => {
   const [query, setQuery] = useState('');
   const [sqlQuery, setSqlQuery] = useState("");
+  const [showVisualisations, setShowVisualisations] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [isEditingSql, setIsEditingSql] = useState(false);
   const [queryResults, setQueryResults] = useState(null); // State to store query results
   const [tableData, setTableData] = useState(null);
+  const [selectQuery, setSelectQuery] = useState(true);
   const sqlEditorRef = useRef(null);
 
   const [barChartData, setBarChartData] = useState(null);
@@ -50,7 +27,7 @@ const QueryInterface = () => {
   const [lineChartData, setLineChartData] = useState(null);
 
 
-  const handleSubmit = async (e, errorHandling = false) => {
+  const handleSubmit = async (e, errorHandling = null) => {
     e.preventDefault();
     console.log('Query submitted:', query);
   
@@ -78,7 +55,7 @@ const QueryInterface = () => {
       const res = await axios.post('http://localhost:8000/api/generate-sql/', {
         natural_language: query,
         db_config: dbConfig,
-        ...(errorHandling ? { error: true } : {}) // Include error param if errorHandling is true
+        ...(errorHandling ? { error: errorHandling } : {}) // Pass the error message if provided
       });
     
       console.log('Response from backend:', res.data);
@@ -86,12 +63,20 @@ const QueryInterface = () => {
     
       if (res.status === 200) {
         let cleanedQuery = res.data.sql_query;
-    
-        // Fix: Remove extra backslashes
-        cleanedQuery = cleanedQuery.replace(/\\_/g, "_").replace(/\\\\/g, "\\");
-    
-        // Fix: Remove Markdown code block formatting
-        cleanedQuery = cleanedQuery.replace(/```sql\n?/g, "").replace(/```/g, "").trim();
+        
+        // Collapse multiple backslashes into one
+        cleanedQuery = cleanedQuery.replace(/\\+/g, "\\");
+        
+        // Remove backslashes preceding asterisks and underscores
+        cleanedQuery = cleanedQuery
+          .replace(/\\\*/g, "*")  // Remove backslash before asterisk
+          .replace(/\\_/g, "_");  // Remove backslash before underscore
+        
+        // Remove Markdown code block formatting
+        cleanedQuery = cleanedQuery
+          .replace(/```sql\n?/g, "")
+          .replace(/```/g, "")
+          .trim();
     
         setSqlQuery(cleanedQuery);
         setShowResults(true);
@@ -107,6 +92,8 @@ const QueryInterface = () => {
     
     setShowResults(true);
   };
+  
+  
   
   const runQuery = async () => {
     // Fetch dbConfig from localStorage (same logic as in handleSubmit)
@@ -144,15 +131,24 @@ const QueryInterface = () => {
       console.log('Response from backend (raw-sql):', res.data);
   
       if (res.status === 200) {
-        setQueryResults(res.data.results || res.data.affected_rows || { message: 'Query executed successfully' });
-        console.log('Query result : ', queryResults);
+        let results;
+        if (res.data.results) {
+          results = res.data.results;
+          setSelectQuery(true); // This is a SELECT query.
+        } else if (typeof res.data.affected_rows !== 'undefined') {
+          results = { message: `Affected rows: ${res.data.affected_rows}` };
+          setSelectQuery(false); // Non-SELECT query: show alert.
+        } else {
+          results = { message: 'Query executed successfully.' };
+        }
+        setQueryResults(results);
         setShowResults(true);
       } else {
         // Check if error message indicates a missing relation
         if (res.data.error && res.data.error.includes('does not exist')) {
           console.warn('Detected missing relation error. Re-generating SQL with error handling.');
-          // Call handleSubmit again with error flag set
-          handleSubmit({ preventDefault: () => {} }, true);
+          // Call handleSubmit again with the actual error message
+          handleSubmit({ preventDefault: () => {} }, res.data.error);
           return;
         } else {
           console.error('Error running SQL query:', res.status, res.data);
@@ -168,7 +164,7 @@ const QueryInterface = () => {
         error.response.data.error.includes('does not exist')
       ) {
         console.warn('Caught error in raw-sql call. Re-generating SQL with error handling.');
-        handleSubmit({ preventDefault: () => {} }, true);
+        handleSubmit({ preventDefault: () => {} }, error.response.data.error);
         return;
       }
       console.error('Error sending query (raw-sql):', error);
@@ -271,9 +267,19 @@ const exportTableDataToCSV = (tableData, filename = "export.csv") => {
 };
 
 
-  useEffect(() => {
-    setTableData(queryResults);
-  }, [queryResults]);
+useEffect(() => {
+  setShowVisualisations(false);
+  if (queryResults !== null && queryResults !== undefined) {
+    if (selectQuery) {
+      setTableData(queryResults);
+    } else {
+      alert("Database Updated");
+      console.log("Database Updated");
+    }
+  }
+}, [queryResults, selectQuery]);
+
+
 
   useEffect(() => {
     fetchVisualizationData(queryResults);
@@ -366,32 +372,16 @@ const exportTableDataToCSV = (tableData, filename = "export.csv") => {
                   </div>
                 </div>
 
-                {/* AI Insights - Takes 1 column */}
-                {/* <div>
-                  <h2 className="text-xl font-bold mb-3 gradient-text">AI Insights</h2>
-                  <div className="card h-[500px] overflow-y-auto">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center">
-                      <FiInfo className="mr-2 text-primary-500" />
-                      Key Observations
-                    </h3>
-                    <ul className="space-y-3">
-                      {mockInsights.map((insight, index) => (
-                        <li key={index} className="flex items-start">
-                          <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary-100 text-primary-700 text-sm font-medium mr-3 flex-shrink-0">
-                            {index + 1}
-                          </span>
-                          <span className="text-dark-700">{insight}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div> */}
               </div>
 
               {/* Visualizations - Varied card sizes */}
-              <div className="mb-8">
+
+                <div className="mb-8">
+                <div className="flex items-center justify-between mb-3">
                 <h2 className="text-xl font-bold mb-3 gradient-text">Visualizations</h2>
-                
+                <button onClick={() => setShowVisualisations(!showVisualisations)} className="flex items-center gap-2 text-primary-600 hover:text-primary-700"><FiArrowDownCircle/>Toggle</button>
+                </div>
+                {showVisualisations && (
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-9">
 
                   {barChartData && <CustomBarChart data={barChartData} />}
@@ -399,7 +389,7 @@ const exportTableDataToCSV = (tableData, filename = "export.csv") => {
                   {pieChartData && <CustomPieChart data={pieChartData} />}
 
                   {lineChartData && <CustomLineChart data={lineChartData} />}
-                </div>
+                </div>)}
               </div>
             </motion.div>
           </div>

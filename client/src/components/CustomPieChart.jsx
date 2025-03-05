@@ -4,11 +4,26 @@ import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 const COLORS = ["#0c8ee7", "#7c3aed", "#f59e0b", "#10b981", "#ef4444"];
 
 const CustomPieChart = ({ data }) => {
-  // Determine the dynamic label key from the first item of data.values.
+  // Transform data.values if they are not objects (e.g., numbers)
+  let pieData = [];
+  if (data.values && data.values.length > 0) {
+    if (typeof data.values[0] === "object") {
+      pieData = data.values;
+    } else {
+      // Convert array of numbers to array of objects with a label and value
+      pieData = data.values.map((v, i) => ({
+        label: v.toString(), // or you can use a default like `Value ${i + 1}`
+        value: v,
+      }));
+    }
+  }
+
+  // Determine the dynamic label key if pieData consists of objects.
+  // If it's numbers transformed into objects, it'll use "label".
   const labelKey =
-    data.values && data.values.length > 0
-      ? Object.keys(data.values[0]).find((key) => key !== "value")
-      : "label"; // fallback if not found
+    pieData.length > 0 && typeof pieData[0] === "object"
+      ? Object.keys(pieData[0]).find((key) => key !== "value")
+      : "label";
 
   return (
     <div className="card md:col-span-4">
@@ -19,7 +34,7 @@ const CustomPieChart = ({ data }) => {
       <ResponsiveContainer width="100%" height={300}>
         <PieChart>
           <Pie
-            data={data.values}
+            data={pieData}
             cx="50%"
             cy="50%"
             labelLine={false}
@@ -30,7 +45,7 @@ const CustomPieChart = ({ data }) => {
               `${payload[labelKey]} ${(percent * 100).toFixed(0)}%`
             }
           >
-            {data.values.map((entry, index) => (
+            {pieData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>

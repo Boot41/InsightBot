@@ -201,9 +201,15 @@ def generate_sql_query(request):
         client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
 
         # Create the base prompt
-        base_prompt = f"""Given the following database schema:{schema_description}
-        Convert this natural language query to SQL:"{natural_language}"
-        Respond with ONLY the SQL query, no explanations or additional text. Make sure the query is valid PostgreSQL syntax."""
+        base_prompt = f"""Given the following database schema:
+        {schema_description}
+        Convert this natural language query to SQL: "{natural_language}"
+        Respond with ONLY the SQL query, no explanations or additional text.
+        Ensure that both table names and column names are properly quoted with double quotes. 
+        For example, generate queries like:
+        SELECT * FROM "UserWorkspace" INNER JOIN "User" ON "UserWorkspace"."userId" = "User"."id";
+        This guarantees the query is valid PostgreSQL syntax.
+        """
 
         # Modify prompt for error handling if requested
         if error_handling_requested:
@@ -223,7 +229,7 @@ def generate_sql_query(request):
                     "content": prompt
                 }
             ],
-            model="mixtral-8x7b-32768",
+            model="llama3-8b-8192",
             temperature=0,
             max_tokens=1000,
         )
@@ -252,6 +258,7 @@ def get_db_schema(db_config):
         if not all([dbname, user, password, host]):
             raise ValueError('Incomplete database credentials')
 
+        print(db_config)
         # Create connection
         conn = psycopg2.connect(
             dbname=dbname,
