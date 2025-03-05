@@ -2,64 +2,43 @@ import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FiSend, FiArrowLeft, FiDatabase, FiBarChart2, FiPieChart, FiTrendingUp, FiInfo, FiEdit2, FiArrowUpCircle } from 'react-icons/fi';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
-         LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+  LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import axios from 'axios';
+import CustomBarChart from './CustomBarChart';
+import CustomPieChart from './CustomPieChart';
+import CustomLineChart from './CustomLineChart';
 
-// Mock movie data
-const movieData = [
-  { id: 1, title: 'The Shawshank Redemption', genre: 'Drama', year: 1994, rating: 9.3, streams: 1250000 },
-  { id: 2, title: 'The Godfather', genre: 'Crime', year: 1972, rating: 9.2, streams: 980000 },
-  { id: 3, title: 'Pulp Fiction', genre: 'Crime', year: 1994, rating: 8.9, streams: 1100000 },
-  { id: 4, title: 'The Dark Knight', genre: 'Action', year: 2008, rating: 9.0, streams: 1450000 },
-  { id: 5, title: 'Inception', genre: 'Sci-Fi', year: 2010, rating: 8.8, streams: 1300000 },
-  { id: 6, title: 'Interstellar', genre: 'Sci-Fi', year: 2014, rating: 8.6, streams: 1200000 },
-  { id: 7, title: 'Fight Club', genre: 'Drama', year: 1999, rating: 8.8, streams: 950000 },
-  { id: 8, title: 'The Matrix', genre: 'Sci-Fi', year: 1999, rating: 8.7, streams: 1050000 },
-  { id: 9, title: 'Goodfellas', genre: 'Crime', year: 1990, rating: 8.7, streams: 850000 },
-  { id: 10, title: 'Parasite', genre: 'Thriller', year: 2019, rating: 8.6, streams: 780000 },
-];
+
+const barChartData = {
+  xlabel: "Products",
+  ylabel: "Sales",
+  xvalues: ["Laptop", "Phone", "Tablet", "Monitor", "Keyboard"],
+  yvalues: [500, 800, 300, 600, 400],
+};
 
 // Genre data for pie chart
-const genreData = [
-  { name: 'Drama', value: 2 },
-  { name: 'Crime', value: 3 },
-  { name: 'Sci-Fi', value: 3 },
-  { name: 'Action', value: 1 },
-  { name: 'Thriller', value: 1 },
-];
+const pieChartData = {
+  xlabel: "Movies by Genre",
+  values: [
+    { name: "Action", value: 40 },
+    { name: "Comedy", value: 30 },
+    { name: "Drama", value: 20 },
+    { name: "Sci-Fi", value: 10 },
+  ],
+};
 
-// Year data for line chart
-const yearData = [
-  { year: '1970s', avgRating: 9.2, movies: 1 },
-  { year: '1990s', avgRating: 8.8, movies: 4 },
-  { year: '2000s', avgRating: 9.0, movies: 1 },
-  { year: '2010s', avgRating: 8.7, movies: 4 },
-];
-
-// Colors for charts
-const COLORS = ['#0c8ee7', '#7c3aed', '#36aaf5', '#8b5cf6', '#0070c4', '#6d28d9'];
-
-// Mock SQL query
-const mockSqlQuery = `SELECT m.title, m.genre, m.release_year, m.rating, COUNT(s.id) as stream_count
-FROM movies m
-JOIN streams s ON m.id = s.movie_id
-GROUP BY m.id
-ORDER BY m.rating DESC
-LIMIT 10;`;
-
-// Mock AI insights
-const mockInsights = [
-  "Sci-Fi movies make up 30% of the top-rated films but generate 35% of total streams.",
-  "Movies from the 1990s have consistently high ratings, averaging 8.8/10.",
-  "The Dark Knight (2008) has the highest number of streams despite not having the highest rating.",
-  "Crime genre films have maintained popularity across decades, appearing in the 1970s, 1990s, and 2010s."
-];
+const lineChartData = {
+  xlabel: "Year",
+  ylabel: "Average Temperature (°C)",
+  xvalues: ["2000", "2005", "2010", "2015", "2020"],
+  yvalues: [14.5, 14.8, 12.1, 15.4, 15.8],
+};
 
 const QueryInterface = () => {
   const [query, setQuery] = useState('');
-  const [sqlQuery, setSqlQuery] = useState(mockSqlQuery);
+  const [sqlQuery, setSqlQuery] = useState("");
   const [showResults, setShowResults] = useState(false);
   const [isEditingSql, setIsEditingSql] = useState(false);
   const [queryResults, setQueryResults] = useState(null); // State to store query results
@@ -97,7 +76,14 @@ const QueryInterface = () => {
         db_config: dbConfig
       });
     
-      console.log('Response from backend:', res.data);
+      console.log('Response from backend:', res.data);// Mock AI insights
+      const mockInsights = [
+        "Sci-Fi movies make up 30% of the top-rated films but generate 35% of total streams.",
+        "Movies from the 1990s have consistently high ratings, averaging 8.8/10.",
+        "The Dark Knight (2008) has the highest number of streams despite not having the highest rating.",
+        "Crime genre films have maintained popularity across decades, appearing in the 1970s, 1990s, and 2010s."
+      ];
+      
       console.log('Generated SQL query:', res.data.sql_query);
     
       if (res.status === 200) {
@@ -172,12 +158,6 @@ const QueryInterface = () => {
       console.error('Error sending query (raw-sql):', error);
       alert('Failed to send query (raw-sql). Check console for error.');
     }
-  };
-
-
-  const handleSqlSubmit = () => {
-    console.log('SQL query submitted:', sqlQuery);
-    // Here you would typically send the SQL query to your backend
   };
 
   const handleSqlEdit = () => {
@@ -298,92 +278,17 @@ const QueryInterface = () => {
               </div>
 
               {/* Visualizations - Varied card sizes */}
-              {/* <div className="mb-8">
+              <div className="mb-8">
                 <h2 className="text-xl font-bold mb-3 gradient-text">Visualizations</h2>
                 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                  <div className="card md:col-span-5">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center">
-                      <FiBarChart2 className="mr-2 text-primary-500" />
-                      Rating by Movie
-                    </h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={movieData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="title" tick={false} />
-                        <YAxis domain={[8, 10]} />
-                        <Tooltip 
-                          formatter={(value, name) => [value, 'Rating']}
-                          labelFormatter={(label) => movieData.find(m => m.title === label)?.title}
-                        />
-                        <Bar dataKey="rating" fill="#0c8ee7" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-9">
+                  <CustomBarChart data={barChartData} />
 
-                  <div className="card md:col-span-3">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center">
-                      <FiPieChart className="mr-2 text-secondary-500" />
-                      Movies by Genre
-                    </h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                        <Pie
-                          data={genreData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        >
-                          {genreData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
+                  <CustomPieChart data={pieChartData} />
 
-                  <div className="card md:col-span-4">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center">
-                      <FiBarChart2 className="mr-2 text-secondary-500" />
-                      Stream Count by Movie
-                    </h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={movieData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="title" tick={false} />
-                        <YAxis />
-                        <Tooltip 
-                          formatter={(value, name) => [value.toLocaleString(), 'Streams']}
-                          labelFormatter={(label) => movieData.find(m => m.title === label)?.title}
-                        />
-                        <Bar dataKey="streams" fill="#7c3aed" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  <div className="card md:col-span-12">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center">
-                      <FiTrendingUp className="mr-2 text-primary-500" />
-                      Average Rating by Decade
-                    </h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={yearData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="year" />
-                        <YAxis domain={[8.5, 9.5]} />
-                        <Tooltip />
-                        <Legend />
-                        <Line type="monotone" dataKey="avgRating" stroke="#7c3aed" activeDot={{ r: 8 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
+                  <CustomLineChart data={lineChartData} />
                 </div>
-              </div> */}
+              </div>
             </motion.div>
           </div>
         )}
@@ -424,15 +329,7 @@ const QueryInterface = () => {
                     onChange={(e) => setSqlQuery(e.target.value)}
                     className="w-full px-4 py-3 bg-gray-50 text-dark-900 font-mono text-sm h-24 border-none focus:ring-1 focus:ring-primary-400 focus:outline-none"
                   />
-                  <button
-                    onClick={() => {
-                      handleSqlSubmit();
-                      setIsEditingSql(false);
-                    }}
-                    className="absolute right-3 bottom-3 px-3 py-1 rounded-md bg-primary-600 text-white text-xs font-medium hover:bg-primary-700"
-                  >
-                    Run SQL
-                  </button>
+                  
                 </div>
               ) : (
                 <div className="overflow-hidden">

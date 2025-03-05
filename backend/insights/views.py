@@ -167,6 +167,9 @@ def generate_sql_query(request):
         if not natural_language:
             return Response({'error': 'Natural language query is required'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Check for the error parameter in request body
+        error_handling_requested = request.data.get('error', False) # Default to False if not present
+
         # Get database schema for context
         db_config = request.data.get('db_config', {})
         if not db_config:
@@ -180,7 +183,7 @@ def generate_sql_query(request):
 
         # Get schema information
         schema_info = get_db_schema(db_config)
-        
+
         # Format schema for prompt
         schema_description = "Database Schema:\n"
         for schema_name, tables in schema_info.items():
@@ -197,10 +200,16 @@ def generate_sql_query(request):
         # Initialize Groq client
         client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
 
-        # Create the prompt
-        prompt = f"""Given the following database schema:{schema_description}
+        # Create the base prompt
+        base_prompt = f"""Given the following database schema:{schema_description}
         Convert this natural language query to SQL:"{natural_language}"
         Respond with ONLY the SQL query, no explanations or additional text. Make sure the query is valid PostgreSQL syntax."""
+
+        # Modify prompt for error handling if requested
+        if error_handling_requested:
+            prompt = base_prompt + """\n\nWhen generating the SQL query, please be extra careful to avoid potential errors. Ensure that the query is robust and handles cases where data might be missing or inconsistent. Focus on generating a query that is less likely to fail, even if it means being slightly less precise in perfectly capturing the natural language intent. prioritize correctness and stability over aggressive data retrieval."""
+        else:
+            prompt = base_prompt
 
         # Generate SQL query using Groq
         chat_completion = client.chat.completions.create(
@@ -228,7 +237,7 @@ def generate_sql_query(request):
 
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
+         
 def get_db_schema(db_config):
     """Helper function to get database schema"""
     try:
