@@ -400,48 +400,55 @@ const databaseName = connectionFormData.database || 'Movies Database';
               >
                 {/* Raw Data Table */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                  <div className="md:col-span-3">
-                    <div className="flex items-center justify-between mb-3">
-                      <h2 className="text-xl font-bold mb-3 gradient-text">Raw Data</h2>
-                      <button
-                        onClick={() => exportTableDataToCSV(activeTab.tableData)}
-                        className="flex items-center gap-2 text-primary-600 hover:text-primary-700"
-                      >
-                        Export CSV <FiArrowDownCircle className="w-5 h-5" />
-                      </button>
-                    </div>
-                    <div className="card overflow-x-auto h-[500px]">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="sticky top-0 bg-white">
-                          <tr>
-                            {activeTab.tableData && activeTab.tableData[0] && Object.keys(activeTab.tableData[0]).map((header) => (
-                              <th
-                                key={header}
-                                className="px-6 py-3 text-left text-xs font-medium text-dark-500 uppercase tracking-wider"
-                              >
-                                {header}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {activeTab.tableData && activeTab.tableData.map((row, index) => (
-                            <tr key={index}>
-                              {Object.values(row).map((cell, cellIndex) => (
-                                <td
-                                  key={cellIndex}
-                                  className="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark-900"
-                                >
-                                  {cell}
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
+  <div className="md:col-span-3">
+    {/* Heading & export button OUTSIDE scrollable container */}
+    <div className="flex items-center justify-between">
+      <h2 className="text-xl font-bold gradient-text">Raw Data</h2>
+      <button
+        onClick={() => exportTableDataToCSV(activeTab.tableData)}
+        className="flex items-center gap-2 text-primary-600 hover:text-primary-700"
+      >
+        Export CSV <FiArrowDownCircle className="w-5 h-5" />
+      </button>
+    </div>
+
+    {/* Scrollable container with sticky header */}
+    <div className="card relative h-[500px] overflow-auto mt-3">
+      <table className="min-w-full divide-y divide-gray-200">
+        {/* Sticky header with higher z-index */}
+        <thead className="sticky top-0 bg-white z-50">
+          <tr>
+            {activeTab.tableData && activeTab.tableData[0] && 
+              Object.keys(activeTab.tableData[0]).map((header) => (
+                <th
+                  key={header}
+                  className="px-6 py-3 text-left text-xs font-medium text-dark-500 uppercase tracking-wider"
+                >
+                  {header}
+                </th>
+              ))
+            }
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {activeTab.tableData && activeTab.tableData.map((row, index) => (
+            <tr key={index}>
+              {Object.values(row).map((cell, cellIndex) => (
+                <td
+                  key={cellIndex}
+                  className="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark-900"
+                >
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 
                 {/* Visualizations */}
                 <div className="mb-8">

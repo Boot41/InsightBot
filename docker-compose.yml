@@ -12,16 +12,6 @@ services:
     ports:
       - "5432:5432"
 
-  # pgadmin:
-  #   image: dpage/pgadmin4
-  #   environment:
-  #     - PGADMIN_DEFAULT_EMAIL=admin@admin.com
-  #     - PGADMIN_DEFAULT_PASSWORD=admin
-  #   ports:
-  #     - "5050:80"
-  #   depends_on:
-  #     - db
-
   querydb:
     image: postgres:latest
     environment:
@@ -47,6 +37,14 @@ services:
     depends_on:
       - db
       - querydb
+
+  client:
+    build: ./client
+    volumes:
+      - ./client:/app
+    ports:
+      - "5175:5173"
+    command: npm run dev -- --host
 
 volumes:
   postgres_data:

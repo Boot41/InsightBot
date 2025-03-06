@@ -76,7 +76,7 @@ const HeroSection = ({ onConnectClick }) => {
               </button>
             </div>
             
-            <div className="mt-8 flex items-center justify-center lg:justify-start">
+            {/* <div className="mt-8 flex items-center justify-center lg:justify-start">
               <div className="flex -space-x-2">
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-gray-200"></div>
@@ -85,7 +85,7 @@ const HeroSection = ({ onConnectClick }) => {
               <p className="ml-4 text-sm text-dark-600">
                 <span className="font-semibold">500+</span> data teams trust InsightBot
               </p>
-            </div>
+            </div> */}
           </motion.div>
           
           <motion.div 
