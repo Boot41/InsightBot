@@ -1,15 +1,146 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { FiArrowLeft, FiDatabase, FiArrowDownCircle, FiSend, FiArrowUpCircle, FiEdit2, FiX, FiPlus } from 'react-icons/fi';
-import { motion } from 'framer-motion';
+import {
+  FiArrowLeft,
+  FiDatabase,
+  FiArrowDownCircle,
+  FiSend,
+  FiArrowUpCircle,
+  FiEdit2,
+  FiX,
+  FiPlus,
+  FiChevronDown,
+  FiChevronRight
+
+} from 'react-icons/fi';
+import { motion,AnimatePresence } from 'framer-motion';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import CustomBarChart from './CustomBarChart';
 import CustomPieChart from './CustomPieChart';
 import CustomLineChart from './CustomLineChart';
 
+/**
+ * Sidebar component to display the database schema hierarchically.
+ * Expected schema format:
+ * {
+ *   "public": {
+ *      "table_name": [ { column_name, data_type, ... }, ... ],
+ *      ...
+ *   },
+ *   ...
+ * }
+ */
+const SchemaSidebar = ({ schema }) => {
+  // States to control expanded/collapsed status
+  const [expandedSchemas, setExpandedSchemas] = useState({});
+  const [expandedTables, setExpandedTables] = useState({});
+
+  const toggleSchema = (schemaName) => {
+    setExpandedSchemas((prev) => ({
+      ...prev,
+      [schemaName]: !prev[schemaName]
+    }));
+  };
+
+  const toggleTable = (schemaName, tableName) => {
+    const key = `${schemaName}_${tableName}`;
+    setExpandedTables((prev) => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  return (
+    <div
+      className="bg-gray-50 h-full p-4 overflow-y-auto border-r border-gray-200"
+      style={{ maxHeight: 'calc(100vh - 80px)' }}
+    >
+      <h2 className="text-xl font-bold mb-6 bg-gradient-to-r from-blue-500 to-indigo-500 text-transparent bg-clip-text">
+        Your Tables
+      </h2>
+      {(!schema || Object.keys(schema).length === 0) ? (
+        <p className="text-gray-500">No schema loaded.</p>
+      ) : (
+        Object.entries(schema).map(([schemaName, tables]) => (
+          <div key={schemaName} className="mb-4">
+            <div
+              onClick={() => toggleSchema(schemaName)}
+              className="cursor-pointer flex items-center justify-between p-2 rounded-md hover:bg-gray-100 transition-colors"
+            >
+              <span className="text-lg font-bold text-gray-800">{schemaName}</span>
+              <span className="text-gray-600">
+                {expandedSchemas[schemaName] ? (
+                  <FiChevronDown size={20} />
+                ) : (
+                  <FiChevronRight size={20} />
+                )}
+              </span>
+            </div>
+            <AnimatePresence>
+              {expandedSchemas[schemaName] && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="ml-4 mt-2 overflow-hidden"
+                >
+                  {Object.entries(tables).map(([tableName, columns]) => {
+                    const key = `${schemaName}_${tableName}`;
+                    return (
+                      <div key={tableName} className="mb-2">
+                        <div
+                          onClick={() => toggleTable(schemaName, tableName)}
+                          className="cursor-pointer flex items-center justify-between p-2 rounded-md hover:bg-gray-50 transition-colors"
+                        >
+                          <span className="text-md font-semibold text-gray-700">{tableName}</span>
+                          <span className="text-gray-500">
+                            {expandedTables[key] ? (
+                              <FiChevronDown size={18} />
+                            ) : (
+                              <FiChevronRight size={18} />
+                            )}
+                          </span>
+                        </div>
+                        <AnimatePresence>
+                          {expandedTables[key] && (
+                            <motion.ul
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.3 }}
+                              className="ml-4 mt-1 overflow-hidden"
+                            >
+                              {columns.map((col, index) => (
+                                <li
+                                  key={index}
+                                  className="text-sm text-gray-600 py-1 border-b border-gray-100"
+                                >
+                                  <span className="font-medium">{col.column_name}</span>
+                                  <span className="italic text-xs text-gray-500 ml-1">
+                                    ({col.data_type})
+                                  </span>
+                                </li>
+                              ))}
+                            </motion.ul>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ))
+      )}
+    </div>
+  );
+};
+
 const QueryInterface = () => {
-  // Initialize tabs state; each tab stores its own query & result data.
+  // Each tab maintains its own query/SQL/visualization state.
   const [tabs, setTabs] = useState([
     {
       id: 1,
@@ -30,20 +161,25 @@ const QueryInterface = () => {
   ]);
   const [activeTabId, setActiveTabId] = useState(1);
   const [nextTabId, setNextTabId] = useState(2);
+  // Global schema state (same for all tabs)
+  const [schemaData, setSchemaData] = useState({});
   const sqlEditorRef = useRef(null);
-
-  // Helper functions to get and update the active tab
+  const connectionFormData = JSON.parse(localStorage.getItem('connectionFormData')) || {};
+const databaseName = connectionFormData.database || 'Movies Database';
+  // Helper functions to get/update the active tab using a functional update.
   const getActiveTab = () => tabs.find(tab => tab.id === activeTabId);
 
   const updateActiveTab = (updates) => {
-    setTabs((prevTabs) =>
-      prevTabs.map((tab) =>
+    setTabs(prevTabs =>
+      prevTabs.map(tab =>
         tab.id === activeTabId ? { ...tab, ...updates } : tab
       )
     );
   };
-   
-  // Tab management functions
+
+  // -----------------
+  // Tabs Management
+  // -----------------
   const addNewTab = () => {
     const newTab = {
       id: nextTabId,
@@ -81,16 +217,15 @@ const QueryInterface = () => {
     setActiveTabId(tabId);
   };
 
-  // ---------------------------
+  // --------------------------
   // API CALLS & EVENT HANDLERS
-  // ---------------------------
-
+  // --------------------------
   const handleSubmit = async (e, errorHandling = null) => {
     e.preventDefault();
     const activeTab = getActiveTab();
     console.log('Query submitted:', activeTab.query);
 
-    // Get dbConfig from localStorage
+    // Fetch dbConfig from localStorage
     const storedDbConfig = localStorage.getItem('connectionFormData');
     let dbConfig;
     if (storedDbConfig) {
@@ -118,14 +253,17 @@ const QueryInterface = () => {
       console.log('Response from backend:', res.data);
       if (res.status === 200) {
         let cleanedQuery = res.data.sql_query;
-        // Clean up the SQL string
-        cleanedQuery = cleanedQuery.replace(/\\+/g, "\\")
+        // Clean up the SQL query string
+        cleanedQuery = cleanedQuery
+          .replace(/\\+/g, "\\")
           .replace(/\\\*/g, "*")
           .replace(/\\_/g, "_")
           .replace(/```sql\n?/g, "")
           .replace(/```/g, "")
           .trim();
         updateActiveTab({ sqlQuery: cleanedQuery, showResults: true });
+        // Update the global schema from the response (regardless of query generated)
+        setSchemaData(res.data.schema);
       } else {
         console.error('Error generating SQL:', res.status, res.data);
         alert(`Error generating SQL. Status: ${res.status}. See console.`);
@@ -139,7 +277,6 @@ const QueryInterface = () => {
 
   const runQuery = async () => {
     const activeTab = getActiveTab();
-    // Get dbConfig from localStorage
     const storedDbConfig = localStorage.getItem('connectionFormData');
     let dbConfig;
     if (storedDbConfig) {
@@ -174,10 +311,23 @@ const QueryInterface = () => {
         let results;
         if (res.data.results) {
           results = res.data.results;
-          updateActiveTab({ queryResults: results, selectQuery: true, showResults: true });
+          updateActiveTab({
+            queryResults: results,
+            selectQuery: true,
+            showResults: true,
+            tableData: results,
+          });
+          // Trigger visualization fetch only if new data exists.
+          if (results && results.length > 0) {
+            fetchVisualizationData(results);
+          }
         } else if (typeof res.data.affected_rows !== 'undefined') {
           results = { message: `Affected rows: ${res.data.affected_rows}` };
-          updateActiveTab({ queryResults: results, selectQuery: false, showResults: true });
+          updateActiveTab({
+            queryResults: results,
+            selectQuery: false,
+            showResults: true
+          });
         } else {
           results = { message: 'Query executed successfully.' };
           updateActiveTab({ queryResults: results, showResults: true });
@@ -209,8 +359,7 @@ const QueryInterface = () => {
   };
 
   const handleSqlEdit = () => {
-    const activeTab = getActiveTab();
-    updateActiveTab({ isEditingSql: !activeTab.isEditingSql });
+    updateActiveTab({ isEditingSql: !getActiveTab().isEditingSql });
     setTimeout(() => {
       if (sqlEditorRef.current) {
         sqlEditorRef.current.focus();
@@ -284,42 +433,14 @@ const QueryInterface = () => {
     document.body.removeChild(link);
   };
 
-  // ---------------------------
-  // SIDE EFFECTS
-  // ---------------------------
-
-  // Get the active tab from the tabs array.
+  // --------------------------
+  // RENDERING & LAYOUT
+  // --------------------------
   const activeTab = tabs.find(tab => tab.id === activeTabId);
 
-  // Update table data when queryResults changes.
-  useEffect(() => {
-    if (activeTab && activeTab.queryResults !== null) {
-      if (activeTab.selectQuery) {
-        if (activeTab.tableData !== activeTab.queryResults) {
-          updateActiveTab({ tableData: activeTab.queryResults });
-        }
-      } else {
-        alert("Database Updated");
-        console.log("Database Updated");
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab?.queryResults]);
-
-  // Fetch visualizations when tableData updates.
-  useEffect(() => {
-    if (activeTab && activeTab.tableData) {
-      fetchVisualizationData(activeTab.tableData);
-    }
-  }, [activeTab?.tableData]);
-  
-
-  // ---------------------------
-  // RENDERING
-  // ---------------------------
   return (
     <div className="min-h-screen flex flex-col query-interface">
-      {/* Main Header */}
+      {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-gray-100 py-4 px-6 shadow-sm">
         <div className="container mx-auto flex items-center justify-between">
           <div className="flex items-center">
@@ -328,14 +449,14 @@ const QueryInterface = () => {
               <span className="text-xl font-bold gradient-text">InsightBot</span>
             </a>
             <div className="ml-6 px-3 py-1 bg-primary-50 text-primary-600 rounded-full text-sm flex items-center">
-              <FiDatabase className="mr-1" size={14} />
-              <span>Connected to Movies Database</span>
-            </div>
+  <FiDatabase className="mr-1" size={14} />
+  <span>Connected to {databaseName}</span>
+</div>
           </div>
         </div>
       </header>
 
-      {/* Tabs Navigation */}
+      {/* Tabs Bar */}
       <div className="bg-white rounded-t-lg shadow">
         <div className="flex items-center space-x-2 p-2 overflow-x-auto">
           {tabs.map(tab => (
@@ -357,186 +478,188 @@ const QueryInterface = () => {
               )}
             </div>
           ))}
-          <button
-            onClick={addNewTab}
-            className="p-2 hover:bg-gray-100 rounded-lg"
-          >
+          <button onClick={addNewTab} className="p-2 hover:bg-gray-100 rounded-lg">
             <FiPlus className="h-5 w-5 text-gray-500" />
           </button>
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-grow overflow-y-auto">
-        {!activeTab?.showResults ? (
-          <div className="h-full flex items-center justify-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="text-center max-w-md px-4"
-            >
-              <h2 className="text-2xl font-bold mb-3">Ask Your Database Anything</h2>
-              <p className="text-dark-600">
-                Type your question in natural language and InsightBot will generate the SQL query for you.
-              </p>
-            </motion.div>
-          </div>
-        ) : (
-          <div className="container mx-auto py-6 px-4">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              {/* Results Layout */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      {/* Main Layout: Sidebar & Content */}
+      <div className="flex flex-grow overflow-y-auto">
+        {/* Sidebar (always visible) */}
+        <div className="w-64">
+          <SchemaSidebar schema={schemaData} />
+        </div>
+        {/* Main Content */}
+        <div className="flex-grow">
+          {!activeTab?.showResults ? (
+            <div className="h-full flex items-center justify-center">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="text-center max-w-md px-4"
+              >
+                <h2 className="text-2xl font-bold mb-3">Ask Your Database Anything</h2>
+                <p className="text-dark-600">
+                  Type your question in natural language and InsightBot will generate the SQL query for you.
+                </p>
+              </motion.div>
+            </div>
+          ) : (
+            <div className="container mx-auto py-6 px-4">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
                 {/* Raw Data Table */}
-                <div className="md:col-span-3">
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-xl font-bold mb-3 gradient-text">Raw Data</h2>
-                    <button
-                      onClick={() => exportTableDataToCSV(activeTab.tableData)}
-                      className="flex items-center gap-2 text-primary-600 hover:text-primary-700"
-                    >
-                      Export CSV <FiArrowDownCircle className="w-5 h-5" />
-                    </button>
-                  </div>
-                  <div className="card overflow-x-auto h-[500px]">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="sticky top-0 bg-white">
-                        <tr>
-                          {activeTab.tableData && activeTab.tableData[0] && Object.keys(activeTab.tableData[0]).map((header) => (
-                            <th
-                              key={header}
-                              className="px-6 py-3 text-left text-xs font-medium text-dark-500 uppercase tracking-wider"
-                            >
-                              {header}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {activeTab.tableData && activeTab.tableData.map((row, index) => (
-                          <tr key={index}>
-                            {Object.values(row).map((cell, cellIndex) => (
-                              <td
-                                key={cellIndex}
-                                className="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark-900"
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  <div className="md:col-span-3">
+                    <div className="flex items-center justify-between mb-3">
+                      <h2 className="text-xl font-bold mb-3 gradient-text">Raw Data</h2>
+                      <button
+                        onClick={() => exportTableDataToCSV(activeTab.tableData)}
+                        className="flex items-center gap-2 text-primary-600 hover:text-primary-700"
+                      >
+                        Export CSV <FiArrowDownCircle className="w-5 h-5" />
+                      </button>
+                    </div>
+                    <div className="card overflow-x-auto h-[500px]">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="sticky top-0 bg-white">
+                          <tr>
+                            {activeTab.tableData && activeTab.tableData[0] && Object.keys(activeTab.tableData[0]).map((header) => (
+                              <th
+                                key={header}
+                                className="px-6 py-3 text-left text-xs font-medium text-dark-500 uppercase tracking-wider"
                               >
-                                {cell}
-                              </td>
+                                {header}
+                              </th>
                             ))}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {activeTab.tableData && activeTab.tableData.map((row, index) => (
+                            <tr key={index}>
+                              {Object.values(row).map((cell, cellIndex) => (
+                                <td
+                                  key={cellIndex}
+                                  className="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark-900"
+                                >
+                                  {cell}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Visualizations */}
-              <div className="mb-8">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-xl font-bold mb-3 gradient-text">Visualizations</h2>
-                  <button
-                    onClick={() =>
-                      updateActiveTab({ showVisualisations: !activeTab.showVisualisations })
-                    }
-                    className="flex items-center gap-2 text-primary-600 hover:text-primary-700"
-                  >
-                    <FiArrowDownCircle />Toggle
-                  </button>
-                </div>
-                {activeTab.showVisualisations && (
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-9">
-                    {activeTab.barChartData && <CustomBarChart data={activeTab.barChartData} />}
-                    {activeTab.pieChartData && <CustomPieChart data={activeTab.pieChartData} />}
-                    {activeTab.lineChartData && <CustomLineChart data={activeTab.lineChartData} />}
+                {/* Visualizations */}
+                <div className="mb-8">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-xl font-bold mb-3 gradient-text">Visualizations</h2>
+                    <button
+                      onClick={() => updateActiveTab({ showVisualisations: !activeTab.showVisualisations })}
+                      className="flex items-center gap-2 text-primary-600 hover:text-primary-700"
+                    >
+                      <FiArrowDownCircle />Toggle
+                    </button>
                   </div>
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </div>
-
-      {/* Floating Chat-Style Input */}
-      <div className="fixed bottom-6 left-0 right-0 z-10 flex justify-center px-4">
-        <div className="w-full max-w-3xl">
-          {activeTab?.showResults && (
-            <div className="bg-white rounded-2xl shadow-xl mb-3 overflow-hidden border border-gray-100">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                <h3 className="text-sm font-medium text-dark-600">Generated SQL</h3>
-                <div className="ml-auto flex items-center">
-                  <button
-                    onClick={runQuery}
-                    className="text-primary-600 hover:text-primary-700 text-sm flex items-center mr-2"
-                  >
-                    <FiArrowUpCircle className="mr-1" size={14} />
-                    FIRE
-                  </button>
-                  <button
-                    onClick={handleSqlEdit}
-                    className="text-primary-600 hover:text-primary-700 text-sm flex items-center mr-2"
-                  >
-                    <FiEdit2 className="mr-1" size={14} />
-                    {activeTab.isEditingSql ? 'Cancel' : 'Edit SQL'}
-                  </button>
+                  {activeTab.showVisualisations && (
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-9">
+                      {activeTab.barChartData && <CustomBarChart data={activeTab.barChartData} />}
+                      {activeTab.pieChartData && <CustomPieChart data={activeTab.pieChartData} />}
+                      {activeTab.lineChartData && <CustomLineChart data={activeTab.lineChartData} />}
+                    </div>
+                  )}
                 </div>
-              </div>
-              {activeTab.isEditingSql ? (
-                <div className="relative">
-                  <textarea
-                    ref={sqlEditorRef}
-                    value={activeTab.sqlQuery}
-                    onChange={(e) => updateActiveTab({ sqlQuery: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 text-dark-900 font-mono text-sm h-24 border-none focus:ring-1 focus:ring-primary-400 focus:outline-none"
-                  />
-                </div>
-              ) : (
-                <div className="overflow-hidden">
-                  <SyntaxHighlighter 
-                    language="sql" 
-                    style={atomOneDark} 
-                    customStyle={{
-                      margin: 0,
-                      padding: '12px 16px',
-                      maxHeight: '100px',
-                      fontSize: '0.875rem',
-                      borderRadius: 0
-                    }}
-                  >
-                    {activeTab.sqlQuery}
-                  </SyntaxHighlighter>
-                </div>
-              )}
+              </motion.div>
             </div>
           )}
-
-          {/* Chat-style Input */}
-          <form onSubmit={handleSubmit} className="relative">
-            <div className="bg-white rounded-full shadow-lg flex items-center pl-6 pr-2 py-2 border border-gray-100">
-              <input
-                type="text"
-                value={activeTab.query}
-                onChange={(e) => updateActiveTab({ query: e.target.value })}
-                placeholder="Ask anything about your movie database..."
-                className="bg-transparent text-dark-800 placeholder-gray-500 flex-grow focus:outline-none text-sm"
-              />
-              <button
-                type="submit"
-                className="w-10 h-10 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 text-white flex items-center justify-center hover:shadow-md transition-all duration-300 ml-2"
-                onClick={handleSubmit}
-              >
-                <FiSend />
-              </button>
-            </div>
-          </form>
         </div>
       </div>
 
-      {/* Bottom Padding to Prevent Hidden Content */}
+      {/* Floating Chat-Style Input */}
+      <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4">
+  <div className="w-full max-w-3xl">
+    {activeTab?.showResults && (
+      <div className="bg-white/95 rounded-2xl shadow-2xl mb-3 overflow-hidden border border-gray-200 backdrop-blur-sm">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h3 className="text-sm font-semibold text-gray-800">Generated SQL</h3>
+          <div className="ml-auto flex items-center space-x-3">
+            <button
+              onClick={runQuery}
+              className="flex items-center text-primary-600 hover:text-primary-700 text-sm font-medium"
+            >
+              <FiArrowUpCircle className="mr-1" size={16} />
+              FIRE
+            </button>
+            <button
+              onClick={handleSqlEdit}
+              className="flex items-center text-primary-600 hover:text-primary-700 text-sm font-medium"
+            >
+              <FiEdit2 className="mr-1" size={16} />
+              {activeTab.isEditingSql ? 'Cancel' : 'Edit SQL'}
+            </button>
+          </div>
+        </div>
+        {activeTab.isEditingSql ? (
+          <div className="relative">
+            <textarea
+              ref={sqlEditorRef}
+              value={activeTab.sqlQuery}
+              onChange={(e) => updateActiveTab({ sqlQuery: e.target.value })}
+              className="w-full px-4 py-3 bg-transparent text-gray-900 font-mono text-sm h-24 border-none focus:ring-2 focus:ring-primary-400 focus:outline-none"
+            />
+          </div>
+        ) : (
+          <div className="overflow-auto max-h-28">
+            <SyntaxHighlighter
+              language="sql"
+              style={atomOneDark}
+              customStyle={{
+                margin: 0,
+                padding: '12px 16px',
+                fontSize: '0.875rem',
+                borderRadius: 0,
+                background: 'black'
+              }}
+            >
+              {activeTab.sqlQuery}
+            </SyntaxHighlighter>
+          </div>
+        )}
+      </div>
+    )}
+
+    {/* Chat-style Input */}
+    <form onSubmit={handleSubmit} className="relative">
+      <div className="bg-white/95 rounded-full shadow-2xl flex items-center pl-6 pr-2 py-3 border border-gray-200 backdrop-blur-sm">
+        <input
+          type="text"
+          value={activeTab.query}
+          onChange={(e) => updateActiveTab({ query: e.target.value })}
+          placeholder="Ask anything about your movie database..."
+          className="bg-transparent text-gray-800 placeholder-gray-500 flex-grow focus:outline-none text-sm"
+        />
+        <button
+          type="submit"
+          className="w-10 h-10 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 text-white flex items-center justify-center hover:shadow-xl transition-all duration-300 ml-2"
+          onClick={handleSubmit}
+        >
+          <FiSend size={16} />
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+      {/* Bottom Padding */}
       <div className="pb-60 md:pb-60"></div>
     </div>
   );

@@ -213,7 +213,7 @@ def generate_sql_query(request):
 
         # Modify prompt for error handling if requested
         if error_handling_requested:
-            prompt = base_prompt + """\n\nWhen generating the SQL query, please be extra careful to avoid potential errors. Ensure that the query is robust and handles cases where data might be missing or inconsistent. Focus on generating a query that is less likely to fail, even if it means being slightly less precise in perfectly capturing the natural language intent. prioritize correctness and stability over aggressive data retrieval."""
+            prompt = base_prompt + """\n\nWhen generating the SQL query, please be extra careful to avoid potential errors. Ensure that the query is robust and handles cases where data might be missing or inconsistent. Focus on generating a query that is less likely to fail, even if it means being slightly less precise in perfectly capturing the natural language intent. prioritize correctness and stability over aggressive data retrieval.Check for upper case or lower case values issue. Check for proper or similar column names. The error message is: {error_handling_requested}"""
         else:
             prompt = base_prompt
 
