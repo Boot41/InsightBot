@@ -58,7 +58,7 @@ function App() {
       <main>
         <HeroSection onConnectClick={handleOpenConnectionDialog} />
         <FeaturesSection />
-        <DemoSection />
+        {/* <DemoSection /> */}
         <FaqSection />
         <CtaSection onConnectClick={handleOpenConnectionDialog} />
       </main>
